@@ -1,0 +1,15 @@
+#N canvas 357 266 450 300 12;
+#X obj 59 158 osc~ 440;
+#X obj 62 200 *~ 0.1;
+#X obj 69 244 dac~;
+#X obj 44 2 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
+#X obj 54 79 random 400;
+#X obj 60 113 + 200;
+#X obj 55 38 metro 300;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 1 0 2 1;
+#X connect 3 0 6 0;
+#X connect 4 0 5 0;
+#X connect 5 0 0 0;
+#X connect 6 0 4 0;
