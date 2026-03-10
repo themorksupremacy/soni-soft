@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Responsive Registration Form | CodingLab </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- Title section -->
+        <div class="title">Sonification Configuration</div>
+
+        <div class="content">
+            <!-- Configuration form -->
+            <form action="/display" method="POST" enctype="multipart/form-data">
+                <div class="configuration-details">
+
+                    <!-- Dataset file -->
+                    <div class="input-box">
+                        <span class="details">Select dataset</span>
+                        <input type="file" placeholder="filename.csv" name="dataset" required>
+                    </div>
+
+                    <!-- Delay Controller -->
+                    <div class="input-box">
+                        <span class="details">Delay controller</span>
+                        <input type="range" name="delay" class="form-range" min="0.01" max="1.0" step="0.1" value="0.5"
+                            oninput="delayValue.value = this.value">
+                        <output id="delayValue">0.5</output>
+                    </div>
+
+                    <!-- Window size -->
+                    <div class="input-box">
+                        <span class="details">Preferred window size</span>
+                        <input type="number" placeholder="1500" name="window_size" required>
+                    </div>
+
+                    <!-- Pure Data port -->
+                    <div class="input-box">
+                        <span class="details">Pure Data port</span>
+                        <input type="number" placeholder="8888" name="port" required>
+                    </div>
+                </div>
+
+                <div class="spectrogram">
+                    <!-- Radio buttons-->
+                    <input type="radio" name="selection" id="dot-1">
+                    <input type="radio" name="selection" id="dot-2">
+                    <span class="gender-title">Generate spectrogram</span>
+                    <div class="category">
+                        <!-- Label for "Yes" -->
+                        <label for="dot-1">
+                            <span class="dot one"></span>
+                            <span class="selection">Yes</span>
+                        </label>
+                        <!-- Label for "No" -->
+                        <label for="dot-2">
+                            <span class="dot two"></span>
+                            <span class="selection">No</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit button -->
+                <div class="button">
+                    <input type="submit" value="Initialise sonification">
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

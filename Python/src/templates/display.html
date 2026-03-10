@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Live Stats</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            background: black;
+            color: lime;
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        .stat {
+            margin: 5px 0;
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Live Rolling Stats</h1>
+    <div class="stat">Mean: <span id="mean">-</span></div>
+    <div class="stat">Skew: <span id="skew">-</span></div>
+    <div class="stat">Std: <span id="std">-</span></div>
+    <div class="stat">Kurtosis: <span id="kurtosis">-</span></div>
+
+    <script>
+        const socket = io();
+
+        // Listen for updates from Flask
+        socket.on('rolling_stats', function (stats) {
+            document.getElementById('mean').textContent = stats.mean;
+            document.getElementById('skew').textContent = stats.skew;
+            document.getElementById('std').textContent = stats.std;
+            document.getElementById('kurtosis').textContent = stats.kurtosis;
+        });
+    </script>
+</body>
+
+</html>

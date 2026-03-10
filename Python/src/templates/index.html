@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!--Meta tags-->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!--Tailwind CSS-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+
+    <title>Sonification Software</title>
+
+</head>
+
+<body>
+    <div class="container">
+        <h2>Sonification Configuration</h2>
+        <form action="/start" method="/POST">
+            <div class="n1">
+                <label>Dataset Selector</label>
+                <input type="file" name="dataset" class="form-control">
+            </div>
+            <div class="n2">
+                <label>Delay Controller</label>
+                <input type="range" name="delay" class="form-range" min="0.1" max="2.0" step="0.1" value="0.5"
+                    oninput="this.nextElementSibling.value = this.value">
+                <output>0.5</output>s
+            </div>
+            <div class="n3">
+                <label>Preferred window size:</label>
+                <input type="number" name="port" class="form-control" value="1500">
+            </div>
+            <div class="n4">
+                <input class="form-check-input" type="checkbox" name="show_spectrogram">
+                <label class="form-check-label">Generate Spectrogram</label>
+            </div>
+            <div class="n5">
+                <label>Pure Data port</label>
+                <input type="number" name="port" class="form-control" value="8888">
+            </div>
+            <button type="submit" class="btn-primary">Initialise sonification</button>
+        </form>
+    </div>
+</body>
+
+</html>
