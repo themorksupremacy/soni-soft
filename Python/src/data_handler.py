@@ -4,6 +4,10 @@ import numpy as np
 import socket
 import time
 
+# Code formatting rules:
+# All data structures containing the statistical momements should be written in the same order everytime.
+# This order being: mean, skew, standard deviation, kurtosis.
+
 
 # Data Retrieval
 def file_loader(file_name):

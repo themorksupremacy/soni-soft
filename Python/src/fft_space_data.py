@@ -41,6 +41,7 @@ try:
     # Print rows & columns for clarity
     print("Rows", rows)
     print("Columns", cols)
+    print(Sxx_original[:1])
 
     # Convert to Pandas dataframe
     df = pd.DataFrame(Sxx_original)
