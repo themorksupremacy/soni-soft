@@ -10,11 +10,28 @@ import time
 
 
 # Data Retrieval
-def file_loader(file_name):
+def file_loader_sat(file_name):
+    return 0
+
+
+def file_loader_sim(file_name):
     df = pd.read_csv(file_name, header=None)
     df.columns = ["Original Data"]
     data_series = df["Original Data"]
     return data_series
+
+
+def file_loader(file_name):
+    ds = pd.Series()
+
+    df = pd.read_csv(file_name)
+    if "B_wave" in df.columns:
+        ds = df["B_wave"]
+    else:
+        df.columns = ["B_wave"]
+        ds = df["B_wave"]
+
+    return ds
 
 
 # Data normalisation

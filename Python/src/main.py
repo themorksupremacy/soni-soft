@@ -9,7 +9,8 @@ import os
 # Data transfer imports
 import socket
 import time
-import seaborn as sns
+
+# import seaborn as sns
 
 
 # ---Mapping Functions---
@@ -236,11 +237,11 @@ def animate_stats(
 
 
 def file_loader():
-    file_name = r"Python\src\S_BFI_2_1_modified.csv"
-    df = pd.read_csv(file_name, header=None)
-    df.columns = ["Original Data"]
-    data_series = df["Original Data"]
-    return data_series
+    # file_name = r"Python\src\S_BFI_2_1_modified.csv"
+    file_name = r"Python\src\Datasets\Satellite_Data\Whistler Wave Database\17th March 2013\Waveform_20130317_t23_0_2.csv"
+    df = pd.read_csv(file_name)
+
+    return df
 
 
 # def investigate_correlation(dataframe):
@@ -259,8 +260,9 @@ def file_loader():
 def main():
 
     val = file_loader()
-    x = compute_all_stats(val, 1500)
-    animate_stats(x, 1500, 2)
+    print(val["B_wave"])
+    # x = compute_all_stats(val, 1500)
+    # animate_stats(x, 1500, 2)
 
 
 if __name__ == "__main__":

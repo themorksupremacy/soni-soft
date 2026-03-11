@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Live Stats</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background: black;
@@ -22,20 +23,81 @@
 
 <body>
     <h1>Live Rolling Stats</h1>
-    <div class="stat">Mean: <span id="mean">-</span></div>
-    <div class="stat">Skew: <span id="skew">-</span></div>
-    <div class="stat">Std: <span id="std">-</span></div>
-    <div class="stat">Kurtosis: <span id="kurtosis">-</span></div>
+
+    <h2>Mean</h2>
+    <canvas id="meanChart"></canvas>
+
+    <h2>Skew</h2>
+    <canvas id="skewChart"></canvas>
+
+    <h2>Standard Deviation</h2>
+    <canvas id="stdChart"></canvas>
+
+    <h2>Kurtosis</h2>
+    <canvas id="kurtChart"></canvas>
+
+    <script>
+        function createChart(canvasId, label, color) {
+            return new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        borderWidth: 2,
+                        tension: 0.2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: { display: true, text: "Time" }
+                        },
+                        y: {
+                            title: { display: true, text: label }
+                        }
+                    }
+                }
+            });
+        }
+
+        const meanChart = createChart("meanChart", "Mean", "lime");
+        const skewChart = createChart("skewChart", "Skew", "cyan");
+        const stdChart = createChart("stdChart", "Std", "orange");
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta");
+    </script>
 
     <script>
         const socket = io();
 
-        // Listen for updates from Flask
+        let t = 0;
+
+        function updateChart(chart, value) {
+
+            chart.data.labels.push(t);
+            chart.data.datasets[0].data.push(value);
+
+            if (chart.data.labels.length > 100) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+
+            chart.update();
+        }
+
         socket.on('rolling_stats', function (stats) {
-            document.getElementById('mean').textContent = stats.mean;
-            document.getElementById('skew').textContent = stats.skew;
-            document.getElementById('std').textContent = stats.std;
-            document.getElementById('kurtosis').textContent = stats.kurtosis;
+
+            updateChart(meanChart, stats.mean);
+            updateChart(skewChart, stats.skew);
+            updateChart(stdChart, stats.std);
+            updateChart(kurtChart, stats.kurtosis);
+
+            t++;
         });
     </script>
 </body>
