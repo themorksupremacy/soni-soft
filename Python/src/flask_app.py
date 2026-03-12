@@ -22,8 +22,11 @@ def display():
     port = int(request.form["port"])
     delay = float(request.form["delay"])
 
+    print(file)
+
     dataset = data_handler.file_loader(file)
-    stats = data_handler.map_all_stats(dataset, window_size)
+    stats = data_handler.map_all_stats(data_handler.retr_b_wave(dataset), 
+                                       window_size)
 
     socketio.start_background_task(
         data_handler.send_over_UDP, stats, "127.0.0.1", port, delay, socketio

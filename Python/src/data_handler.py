@@ -7,6 +7,7 @@ import time
 # Code formatting rules:
 # All data structures containing the statistical momements should be written in the same order everytime.
 # This order being: mean, skew, standard deviation, kurtosis.
+# Statistical moments will use full names as well (e.g. kurtosis, not kurt).
 
 
 # Data Retrieval
@@ -26,13 +27,18 @@ def file_loader(file_name):
 
     df = pd.read_csv(file_name)
     if "B_wave" in df.columns:
-        ds = df["B_wave"]
+        ds = df
     else:
         df.columns = ["B_wave"]
         ds = df["B_wave"]
 
     return ds
 
+def retr_b_wave(data_frame):
+    try:
+        return data_frame['B_wave']
+    except Exception as e:
+        print('Exception: ', e)
 
 # Data normalisation
 def normalise_data(dataframe, range_min, range_max):
@@ -77,6 +83,13 @@ def map_all_stats(data_series, window_size):
         }
     )
 
+# Diagram Generation
+
+def gen_Spectogram():
+    return 0
+
+def gen_freq_dom_comparison():
+    return 0
 
 # Fast Fourier Transforms (FFTs)
 

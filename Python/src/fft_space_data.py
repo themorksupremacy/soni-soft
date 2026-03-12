@@ -8,7 +8,7 @@ from scipy.signal import spectrogram
 
 # Define the file path and signal parameters
 file_path = (
-    "Python\src\Datasets\Simulated_Data\WMC_Data_for_Mark\BFI-2\S_BFI_2_1_modified.csv"
+    r"Python\src\Datasets\Satellite_Data\Whistler Wave Database\17th March 2013\Waveform_20130317_t23_0_86.csv"
 )
 Fs = 35000  # Sampling frequency (Hz) - consistent with other analysis
 # Note from PV: I don't recall what the sampling frequency of Dan's data was. # You should probably change Fs to match Dan's sampling rate otherwise the reported frequency values will be misleading.
@@ -25,7 +25,9 @@ try:
         raise ValueError("The CSV file is empty.")
 
     # Select the first column as the signal
-    signal_data = pd.to_numeric(df.iloc[:, 0], errors="coerce").dropna().values
+    signal_data = pd.to_numeric(df['B_wave'], errors="coerce").dropna().values
+
+    print(signal_data)
 
     if len(signal_data) == 0:
         raise ValueError("No valid numerical data found in the first column.")

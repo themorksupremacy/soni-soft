@@ -18,26 +18,53 @@
             margin: 5px 0;
             font-size: 24px;
         }
+
+        .layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .left {
+            width: 50%;
+            padding-right: 20px;
+        }
+
+        .right {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .right canvas {
+            width: 100% !important;
+            height: 22vh !important; /* 4 charts stacked = ~88% of screen */
+        }
     </style>
 </head>
 
 <body>
-    <h1>Live Rolling Stats</h1>
+    <div class="layout">
+        <div class="left">
+            <h1>Live Rolling Stats</h1>
+            <h2>Mean</h2>
+            <h2>Skew</h2>
+            <h2>Standard Deviation</h2>
+            <h2>Kurtosis</h2>
+        </div>
 
-    <h2>Mean</h2>
-    <canvas id="meanChart"></canvas>
+        <div class="right">
+            <canvas id="meanChart"></canvas>
+            <canvas id="skewChart"></canvas>
+            <canvas id="stdChart"></canvas>
+            <canvas id="kurtChart"></canvas>
+        </div>
+    </div>
 
-    <h2>Skew</h2>
-    <canvas id="skewChart"></canvas>
-
-    <h2>Standard Deviation</h2>
-    <canvas id="stdChart"></canvas>
-
-    <h2>Kurtosis</h2>
-    <canvas id="kurtChart"></canvas>
 
     <script>
-        function createChart(canvasId, label, color) {
+        function createChart(canvasId, label, color, xAxis) {
             return new Chart(document.getElementById(canvasId), {
                 type: 'line',
                 data: {
@@ -56,7 +83,8 @@
                     responsive: true,
                     scales: {
                         x: {
-                            title: { display: true, text: "Time" }
+                            display: xAxis,
+                            title: xAxis ? { display: true, text: "Time" } : undefined
                         },
                         y: {
                             title: { display: true, text: label }
@@ -66,10 +94,10 @@
             });
         }
 
-        const meanChart = createChart("meanChart", "Mean", "lime");
-        const skewChart = createChart("skewChart", "Skew", "cyan");
-        const stdChart = createChart("stdChart", "Std", "orange");
-        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta");
+        const meanChart = createChart("meanChart", "Mean", "lime", false);
+        const skewChart = createChart("skewChart", "Skew", "cyan", false);
+        const stdChart = createChart("stdChart", "Std", "orange", false);
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", true);
     </script>
 
     <script>
