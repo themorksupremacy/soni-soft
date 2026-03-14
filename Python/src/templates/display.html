@@ -52,6 +52,12 @@
             <h2>Skew</h2>
             <h2>Standard Deviation</h2>
             <h2>Kurtosis</h2>
+            <h2>Magnitude</h2>
+            <div style="margin-bottom:20px;">
+                <label for="delaySlider">Playback Delay:</label>
+                <input type="range" id="delaySlider" min="0.01" max="1.0" step="0.01" value="0.5">
+                <span id="delayValue">0.5</span>
+            </div>
         </div>
 
         <div class="right">
@@ -59,6 +65,7 @@
             <canvas id="skewChart"></canvas>
             <canvas id="stdChart"></canvas>
             <canvas id="kurtChart"></canvas>
+            <canvas id="magChart"></canvas>
         </div>
     </div>
 
@@ -97,7 +104,8 @@
         const meanChart = createChart("meanChart", "Mean", "lime", false);
         const skewChart = createChart("skewChart", "Skew", "cyan", false);
         const stdChart = createChart("stdChart", "Std", "orange", false);
-        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", true);
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false);
+        const magChart = createChart("magChart", "Magnitude", "lime", true);
     </script>
 
     <script>
@@ -124,9 +132,24 @@
             updateChart(skewChart, stats.skew);
             updateChart(stdChart, stats.std);
             updateChart(kurtChart, stats.kurtosis);
+            updateChart(magChart, stats.magnitude)
 
             t++;
         });
+
+        const delaySlider = document.getElementById("delaySlider");
+        const delayValue = document.getElementById("delayValue");
+
+        delaySlider.addEventListener("input", function () {
+
+            delayValue.textContent = this.value;
+
+            socket.emit("update_delay", {
+                delay: parseFloat(this.value)
+            });
+
+        });
+
     </script>
 </body>
 
