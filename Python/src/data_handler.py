@@ -116,7 +116,7 @@ def map_all_stats_fdom(data_frame):
         "mean": normalise_data(data_frame["mean"], range_min=50, range_max=105),
         "skew": normalise_data(data_frame["skew"], range_min=-1, range_max=1),
         "std": normalise_data(data_frame["std"], range_min=50, range_max=127),
-        "kurtosis": normalise_and_invert(data_frame["kurtosis"], range_min=50, range_max=300),
+        "kurtosis": normalise_and_invert(data_frame["kurtosis"], range_min=50, range_max=127),
         "magnitude": magnitude,
     })
 
@@ -152,9 +152,7 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq):
     return Sxx_stats
 
 # UDP Transfer
-def send_over_UDP(dataframe, host="127.0.0.1", port=8888, delay=0.1, socketio=None):
-    
-    import flask_app
+def send_over_UDP(dataframe, host="127.0.0.1", port=8888, get_delay=None, socketio=None, stop_event=None):
     
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         for mean, skew, std, kurtosis, magnitude in zip(
@@ -164,6 +162,10 @@ def send_over_UDP(dataframe, host="127.0.0.1", port=8888, delay=0.1, socketio=No
             dataframe["kurtosis"].to_numpy(),
             dataframe["magnitude"].to_numpy(),
         ):
+            
+            if stop_event.is_set():
+                print("Sonification stopped")
+                break
             
             if np.isnan(mean):
                 continue
@@ -183,5 +185,6 @@ def send_over_UDP(dataframe, host="127.0.0.1", port=8888, delay=0.1, socketio=No
                         "magnitude": round(magnitude, 2),
                     },
                 )
-
-            time.sleep(flask_app.current_delay)
+            delay = get_delay()
+            print(delay)
+            time.sleep(delay)

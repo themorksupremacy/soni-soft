@@ -37,6 +37,7 @@
 #X obj 434 388 unpack f f f f f;
 #X obj 566 394 print;
 #X obj 494 715 *~;
+#X obj 19 695 cello;
 #X connect 0 0 35 0;
 #X connect 1 0 2 0;
 #X connect 2 0 4 1;
@@ -81,7 +82,6 @@
 #X connect 34 0 14 1;
 #X connect 35 0 15 0;
 #X connect 35 1 30 0;
-#X connect 35 2 26 0;
 #X connect 35 3 17 0;
 #X connect 35 4 36 0;
 #X connect 35 4 37 1;

@@ -11,35 +11,50 @@
             background: black;
             color: lime;
             font-family: monospace;
-            padding: 20px;
-        }
-
-        .stat {
-            margin: 5px 0;
-            font-size: 24px;
-        }
-
-        .layout {
-            display: flex;
+            margin: 0;
+            padding: 0;
             height: 100vh;
-            width: 100%;
+            box-sizing: border-box;
         }
 
+        /* Grid layout: two columns */
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Left column: control panel + 2 charts stacked */
         .left {
-            width: 50%;
-            padding-right: 20px;
+            display: grid;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 5px;
         }
 
-        .right {
-            width: 50%;
+        /* Control panel styling */
+        .control-panel {
+            padding: 10px;
+            background: #111;
+            border: 1px solid #444;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: space-around;
         }
 
-        .right canvas {
+        /* Right column: 3 charts stacked */
+        .right {
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        canvas {
             width: 100% !important;
-            height: 22vh !important; /* 4 charts stacked = ~88% of screen */
+            height: 100% !important;
+            display: block;
         }
     </style>
 </head>
@@ -47,31 +62,31 @@
 <body>
     <div class="layout">
         <div class="left">
-            <h1>Live Rolling Stats</h1>
-            <h2>Mean</h2>
-            <h2>Skew</h2>
-            <h2>Standard Deviation</h2>
-            <h2>Kurtosis</h2>
-            <h2>Magnitude</h2>
-            <div style="margin-bottom:20px;">
-                <label for="delaySlider">Playback Delay:</label>
-                <input type="range" id="delaySlider" min="0.01" max="1.0" step="0.01" value="0.5">
-                <span id="delayValue">0.5</span>
+            <div class="control-panel">
+                <h2>Control Panel</h2>
+                <div>
+                    <label for="delaySlider">Playback Delay:</label>
+                    <input type="range" id="delaySlider" min="0.01" max="1.0" step="0.01" value="{{ delay }}">
+                    <span id="delayValue">{{ delay }}</span>
+                </div>
+                <div>
+                    <button id="btnStop">Stop Sonification</button>
+                </div>
             </div>
+            <canvas id="kurtChart"></canvas>
+            
+            <canvas id="magChart"></canvas>
         </div>
 
         <div class="right">
-            <canvas id="meanChart"></canvas>
             <canvas id="skewChart"></canvas>
             <canvas id="stdChart"></canvas>
-            <canvas id="kurtChart"></canvas>
-            <canvas id="magChart"></canvas>
+            <canvas id="meanChart"></canvas>
         </div>
     </div>
 
-
     <script>
-        function createChart(canvasId, label, color, xAxis) {
+        function createChart(canvasId, label, color, xAxis, yMin, yMax) {
             return new Chart(document.getElementById(canvasId), {
                 type: 'line',
                 data: {
@@ -94,27 +109,27 @@
                             title: xAxis ? { display: true, text: "Time" } : undefined
                         },
                         y: {
-                            title: { display: true, text: label }
+                            title: { display: true, text: label },
+                            min: yMin, // will be set dynamically
+                            max: yMax
                         }
                     }
                 }
             });
         }
 
-        const meanChart = createChart("meanChart", "Mean", "lime", false);
-        const skewChart = createChart("skewChart", "Skew", "cyan", false);
-        const stdChart = createChart("stdChart", "Std", "orange", false);
-        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false);
-        const magChart = createChart("magChart", "Magnitude", "lime", true);
-    </script>
+        const meanChart = createChart("meanChart", "Mean", "lime", false, 50, 105);
+        const skewChart = createChart("skewChart", "Skew", "cyan", false, -1, 1);
+        const stdChart = createChart("stdChart", "Std", "orange", false, 50, 127);
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, 50, 300);
+        const magChart = createChart("magChart", "Magnitude", "lime", true, 0, 1);
 
-    <script>
+        const charts = [meanChart, skewChart, stdChart, kurtChart, magChart];
+
         const socket = io();
-
         let t = 0;
 
         function updateChart(chart, value) {
-
             chart.data.labels.push(t);
             chart.data.datasets[0].data.push(value);
 
@@ -127,13 +142,11 @@
         }
 
         socket.on('rolling_stats', function (stats) {
-
             updateChart(meanChart, stats.mean);
             updateChart(skewChart, stats.skew);
             updateChart(stdChart, stats.std);
             updateChart(kurtChart, stats.kurtosis);
-            updateChart(magChart, stats.magnitude)
-
+            updateChart(magChart, stats.magnitude);
             t++;
         });
 
@@ -141,16 +154,14 @@
         const delayValue = document.getElementById("delayValue");
 
         delaySlider.addEventListener("input", function () {
-
             delayValue.textContent = this.value;
-
-            socket.emit("update_delay", {
-                delay: parseFloat(this.value)
-            });
-
+            socket.emit("update_delay", { delay: parseFloat(this.value) });
         });
 
+        const btnStop = document.getElementById("btnStop");
+        btnStop.addEventListener("click", function() {
+            socket.emit("stop_sonification");
+        });
     </script>
 </body>
-
 </html>
