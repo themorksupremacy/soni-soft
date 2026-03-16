@@ -5,6 +5,7 @@ import socket
 import time
 from scipy.signal import spectrogram
 from scipy.stats import skew, kurtosis
+import matplotlib.pyplot as plt
 
 # Code formatting rules:
 # All data structures containing the statistical momements should be written in the same order everytime.
@@ -116,7 +117,7 @@ def map_all_stats_fdom(data_frame):
         "mean": normalise_data(data_frame["mean"], range_min=50, range_max=105),
         "skew": normalise_data(data_frame["skew"], range_min=-1, range_max=1),
         "std": normalise_data(data_frame["std"], range_min=50, range_max=127),
-        "kurtosis": normalise_and_invert(data_frame["kurtosis"], range_min=50, range_max=127),
+        "kurtosis": normalise_data(data_frame["kurtosis"], range_min=50, range_max=127),
         "magnitude": magnitude,
     })
 
@@ -148,6 +149,22 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq):
             "kurtosis": kurt_vals,
         }
     )
+
+    # Plot the spectrogram
+    plt.figure(figsize=(12, 6))
+    plt.pcolormesh(
+        t_spec_original, f_spec_original, 10 * np.log10(Sxx_original), shading="gouraud"
+    )
+    plt.ylabel("Frequency [Hz]")
+    plt.xlabel("Time [sec]")
+    plt.title(
+        f"Spectrogram of Original Signal (nperseg={nperseg_val}, noverlap={noverlap_val})"
+    )
+    plt.ylim(
+        0, 5000
+    )  # Adjust y-axis limit based on expected frequency range of the signal
+    plt.colorbar(label="Intensity [dB]")
+    plt.savefig(r"Python\src\Spectrogram.png")
 
     return Sxx_stats
 

@@ -46,24 +46,25 @@
                     </div>
                 </div>
 
-                <div class="spectrogram">
-                    <!-- Radio buttons-->
-                    <input type="radio" name="selection" id="dot-1">
-                    <input type="radio" name="selection" id="dot-2">
-                    <span class="gender-title">Generate spectrogram</span>
+                <div class="domain-selection">
+                    <span class="gender-title">Analysis Domain</span>
+
+                    <input type="radio" name="domain" id="time-domain" value="time" checked>
+                    <input type="radio" name="domain" id="freq-domain" value="frequency">
+
                     <div class="category">
-                        <!-- Label for "Yes" -->
-                        <label for="dot-1">
+                        <label for="time-domain">
                             <span class="dot one"></span>
-                            <span class="selection">Yes</span>
+                            <span class="selection">Time Domain</span>
                         </label>
-                        <!-- Label for "No" -->
-                        <label for="dot-2">
+
+                        <label for="freq-domain">
                             <span class="dot two"></span>
-                            <span class="selection">No</span>
+                            <span class="selection">Frequency Domain</span>
                         </label>
                     </div>
                 </div>
+
 
                 <!-- Submit button -->
                 <div class="button">

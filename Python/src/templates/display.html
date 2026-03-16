@@ -72,6 +72,9 @@
                 <div>
                     <button id="btnStop">Stop Sonification</button>
                 </div>
+                <div>
+                    <button id="btnSpectrogram">Download Spectrogram</button>
+                </div>
             </div>
             <canvas id="kurtChart"></canvas>
             
@@ -161,6 +164,11 @@
         const btnStop = document.getElementById("btnStop");
         btnStop.addEventListener("click", function() {
             socket.emit("stop_sonification");
+        });
+
+        const btnSpectrogram = document.getElementById("btnSpectrogram");
+        document.getElementById("btnSpectrogram").addEventListener("click", function () {
+            window.location.href = "/download_spectrogram";
         });
     </script>
 </body>
