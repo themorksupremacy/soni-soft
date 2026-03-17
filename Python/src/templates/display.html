@@ -77,7 +77,7 @@
                 </div>
             </div>
             <canvas id="kurtChart"></canvas>
-            
+
             <canvas id="magChart"></canvas>
         </div>
 
@@ -124,7 +124,7 @@
         const meanChart = createChart("meanChart", "Mean", "lime", false, 50, 105);
         const skewChart = createChart("skewChart", "Skew", "cyan", false, -1, 1);
         const stdChart = createChart("stdChart", "Std", "orange", false, 50, 127);
-        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, 50, 300);
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, 50, 127);
         const magChart = createChart("magChart", "Magnitude", "lime", true, 0, 1);
 
         const charts = [meanChart, skewChart, stdChart, kurtChart, magChart];
@@ -162,7 +162,7 @@
         });
 
         const btnStop = document.getElementById("btnStop");
-        btnStop.addEventListener("click", function() {
+        btnStop.addEventListener("click", function () {
             socket.emit("stop_sonification");
         });
 
@@ -172,4 +172,5 @@
         });
     </script>
 </body>
+
 </html>
