@@ -10,7 +10,44 @@
     font-family: 'Poppins', sans-serif;
 }
 
-/* Twinkle animation */
+.drop-zone {
+    width: 100%;
+    height: 120px;
+    border: 2px dashed #00ff00;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    background-color: #000;
+    color: #00ff00;
+    transition: all 0.2s ease;
+    font-family: 'Courier New', monospace;
+}
+
+.drop-zone:hover {
+    background-color: #001100;
+}
+
+.drop-zone.dragover {
+    background-color: #002200;
+    box-shadow: 0 0 10px #00ff00;
+}
+
+.drop-text {
+    font-size: 14px;
+    color: #555;
+}
+
+.full-width {
+    width: 100% !important;
+}
+
+#frequency-range {
+    margin-top: 10px;
+}
+
 @keyframes twinkle {
     0% {
         opacity: 0.3;
@@ -27,24 +64,25 @@ body {
     justify-content: center;
     align-items: center;
     padding: 10px;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
 
-    /* Space background */
     background-color: #020111;
     position: relative;
+    overflow: hidden;
 }
 
-/* Star layer */
 body::before {
     content: "";
     position: fixed;
     inset: 0;
 
     background-image:
-        radial-gradient(2px 2px at 20px 30px, #eee, transparent),
-        radial-gradient(2px 2px at 40px 70px, #fff, transparent),
-        radial-gradient(1px 1px at 90px 40px, #ddd, transparent),
-        radial-gradient(2px 2px at 160px 120px, #fff, transparent),
-        radial-gradient(1px 1px at 200px 200px, #ccc, transparent);
+        radial-gradient(2px 2px at 20px 30px, #00ff00, transparent),
+        radial-gradient(2px 2px at 40px 70px, #00cc00, transparent),
+        radial-gradient(1px 1px at 90px 40px, #00ff88, transparent),
+        radial-gradient(2px 2px at 160px 120px, #00ff00, transparent),
+        radial-gradient(1px 1px at 200px 200px, #00aa00, transparent);
 
     background-repeat: repeat;
     background-size: 250px 250px;
@@ -53,14 +91,16 @@ body::before {
     pointer-events: none;
 }
 
-/* Main container */
+
 .container {
     max-width: 700px;
     width: 100%;
-    background-color: #fff;
+    background: #0a0a0a;
     padding: 25px 30px;
     border-radius: 5px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+    border: 2px solid #004400;
+    box-shadow: inset 0 0 10px #002200, 0 0 10px rgba(0, 255, 0, 0.1);
+    color: #00ff00;
 }
 
 .container .title {
@@ -69,15 +109,14 @@ body::before {
     position: relative;
 }
 
+.container .title {
+    color: #00ff00;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
 .container .title::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    height: 3px;
-    width: 30px;
-    border-radius: 5px;
-    background: linear-gradient(135deg, #71b7e6, #9b59b6);
+    background: #00ff00;
 }
 
 .content form .configuration-details {
@@ -102,17 +141,22 @@ form .input-box span.details {
     height: 45px;
     width: 100%;
     outline: none;
-    font-size: 16px;
-    border-radius: 5px;
-    padding-left: 15px;
-    border: 1px solid #ccc;
-    border-bottom-width: 2px;
-    transition: all 0.3s ease;
+    font-size: 14px;
+    border-radius: 3px;
+    padding-left: 10px;
+    border: 1px solid #00ff00;
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+}
+
+.configuration-details .input-box input:focus {
+    box-shadow: 0 0 5px #00ff00;
 }
 
 .configuration-details .input-box input:focus,
 .configuration-details .input-box input:valid {
-    border-color: #9b59b6;
+    border-color: #00ff00;
 }
 
 form .gender-details .gender-title {
@@ -134,45 +178,39 @@ form .category label {
 }
 
 form .category label .dot {
-    height: 18px;
-    width: 18px;
-    border-radius: 50%;
-    margin-right: 10px;
-    background: #d9d9d9;
-    border: 5px solid transparent;
-    transition: all 0.3s ease;
+    background: #000;
+    border: 2px solid #00ff00;
 }
 
-input[type="radio"]:checked + label .dot {
-    background: #9b59b6;
-    border-color: #d9d9d9;
+input[type="radio"]:checked+label .dot {
+    background: #00ff00;
 }
 
 
 form .button {
     height: 45px;
-    margin: 35px 0
+    margin: 35px 0;
+    display: flex;
+    justify-content: center;
 }
 
 form .button input {
+    width: 50%;
     height: 100%;
-    width: 100%;
-    border-radius: 5px;
-    border: none;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 500;
-    letter-spacing: 1px;
+    background: #000;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background: linear-gradient(135deg, #71b7e6, #9b59b6);
+    transition: 0.3s;
 }
 
 form .button input:hover {
-    background: linear-gradient(-135deg, #71b7e6, #9b59b6);
+    background: #002200;
 }
 
-/* Responsive media query code for mobile devices */
+
 @media(max-width: 584px) {
     .container {
         max-width: 100%;
@@ -197,7 +235,20 @@ form .button input:hover {
     }
 }
 
-/* Responsive media query code for mobile devices */
+input[type="radio"] {
+    display: none;
+}
+
+form .category label .dot {
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background: #000;
+    border: 2px solid #00ff00;
+    display: inline-block;
+}
+
 @media(max-width: 459px) {
     .container .content .category {
         flex-direction: column;

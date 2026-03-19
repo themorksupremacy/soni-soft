@@ -1,4 +1,4 @@
-# Imports
+# ---IMPORTS---
 import pandas as pd
 import numpy as np
 import socket
@@ -15,37 +15,33 @@ from scipy.io import wavfile
 # Statistical moments will use full names as well (e.g. kurtosis, not kurt).
 
 
-# Data Retrieval
-def file_loader_sat(file_name):
-    return 0
-
-
-def file_loader_sim(file_name):
-    df = pd.read_csv(file_name, header=None)
-    df.columns = ["Original Data"]
-    data_series = df["Original Data"]
-    return data_series
+# ---DATA RETRIEVAL---
 
 
 def file_loader(file_name):
 
     df = pd.read_csv(file_name)
 
+    # All column headings to lower case to avoid any errors due to case sensitivity.
     df.columns = df.columns.str.lower()
 
+    # Stops if the file is already labelled / is not simulated data.
     if "b_wave" in df.columns:
         return df
 
-    # Since B_wave is missing the header can be removed so as to not lose the first row of data.
+    # Return reference point to start of the file.
     file_name.seek(0)
+    # Header removed since 'b_wave' is missing.
     df = pd.read_csv(file_name, header=None)
 
+    # Give the simulated dataset the same column heading as satellite data.
     cols = ["b_wave"]
     df.columns = cols
 
     return df
 
 
+# Returns a dataseries of the 'b_wave' data retrieved from the csv dataset.
 def retr_b_wave(data_frame):
 
     try:
@@ -55,6 +51,7 @@ def retr_b_wave(data_frame):
         return None
 
 
+# Returns a dataseries of the magnitude data retried from the csv dataset.
 def get_mag(dataframe):
     if "magnitude" in dataframe.columns:
         return dataframe["magnitude"]
@@ -62,18 +59,17 @@ def get_mag(dataframe):
         return None
 
 
-def optimal_window():
-    return 1
+# ---DATA NORMALISATION---
 
 
-# Data normalisation
-def normalise_data(dataframe, range_min, range_max):
-    x_min = np.nanmin(dataframe)
-    x_max = np.nanmax(dataframe)
+# Normalise a given dataseries to a specific range of values.
+def normalise_data(dataseries, range_min, range_max):
+    x_min = np.nanmin(dataseries)
+    x_max = np.nanmax(dataseries)
 
     normalised_data = []
 
-    for d in dataframe:
+    for d in dataseries:
         t = (d - x_min) / (x_max - x_min)
         a = range_min + (t * (range_max - range_min))
         normalised_data.append(a)
@@ -81,6 +77,8 @@ def normalise_data(dataframe, range_min, range_max):
     return normalised_data
 
 
+# Normalise a given dataseries to a specific range of values and invert it.
+# Useful for datastreams where sound output is not intuitive in PD.
 def normalise_and_invert(dataframe, range_min, range_max):
     x_min = np.nanmin(dataframe)
     x_max = np.nanmax(dataframe)
@@ -96,17 +94,24 @@ def normalise_and_invert(dataframe, range_min, range_max):
     return normalised_data
 
 
-# Mapping functions
+# ---MAPPING FUNCTIONS---
+
+
+# Mapping for timeseries data.
 def map_all_stats_tdom(data_series, window_size, magnitude):
     x = data_series.rolling(window=window_size)
 
+    # If magnitude is not present in the dataset, give it a consistent default value.
+    # Magnitude scales the amplitude of the signal in PD.
     if magnitude is None:
         magnitude = [0.5] * len(data_series)
     else:
+        # If magnitude is present, normalise it between 0 and 1.
         magnitude = [np.nan] * (window_size - 1) + normalise_data(
             magnitude[window_size - 1 :], range_min=0.3, range_max=1
         )
 
+    # Normalise all other statistical moments to their respective ranges needed for the specified PD patch.
     return pd.DataFrame(
         {
             "mean": normalise_data(x.mean(), range_min=50, range_max=105),
@@ -118,7 +123,10 @@ def map_all_stats_tdom(data_series, window_size, magnitude):
     )
 
 
+# Mapping for frequency domain.
 def map_all_stats_fdom(data_frame):
+
+    # As of right now magnitude is given a default value until I figure out how to compute this.
     magnitude = [0.5] * len(data_frame["mean"])
 
     return pd.DataFrame(
@@ -134,8 +142,11 @@ def map_all_stats_fdom(data_frame):
     )
 
 
+# --- AUDIFICATION---
+
+
 def audification(data_series, sampling_rate=35087):
-    # Convert to numpy array immediately to use efficient memory handling
+    # Convert pandas series to numpy
     data = data_series.to_numpy()
 
     x_min = data.min()
@@ -147,8 +158,10 @@ def audification(data_series, sampling_rate=35087):
 
     audio_data = (((data - x_min) / range_val) * 2 - 1) * 32767
 
+    # Conversion to integer
     audio_data = audio_data.astype(np.int16)
 
+    # Writing the WAV file
     file_path = r"Python\src\data_audio.wav"
     wavfile.write(file_path, int(sampling_rate), audio_data)
 
@@ -157,54 +170,7 @@ def audification(data_series, sampling_rate=35087):
     return file_path
 
 
-def specific_freq_band(dataseries, nperseg_val, noverlap_val, sampling_freq):
-
-    f_spec_original, t_spec_original, Sxx_original = spectrogram(
-        dataseries, fs=sampling_freq, nperseg=nperseg_val, noverlap=noverlap_val
-    )
-
-    f_low = 4000
-    f_high = 5000
-
-    idx = np.where((f_spec_original >= f_low) & (f_spec_original <= f_high))[0]
-
-    band = Sxx_original[idx, :]
-
-    Sxx_stats = pd.DataFrame(
-        {
-            "mean": np.mean(band, axis=0),
-            "skew": skew(band, axis=0),
-            "std": np.std(band, axis=0),
-            "kurtosis": kurtosis(band, axis=0),
-        }
-    )
-
-    # Spectrogram
-    plt.figure(figsize=(12, 6))
-    plt.pcolormesh(
-        t_spec_original,
-        f_spec_original,
-        10 * np.log10(Sxx_original),
-        shading="gouraud",
-    )
-    plt.ylabel("Frequency [Hz]")
-    plt.xlabel("Time [sec]")
-    plt.ylim(0, 5000)
-    plt.colorbar(label="Intensity [dB]")
-    plt.savefig(r"Python\src\Spectrogram.png")
-    plt.close("all")
-
-    # Correlation heatmap
-    plt.figure()
-    corr_mtx = Sxx_stats.corr()
-    sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
-    plt.title("Correlation heatmap")
-    plt.savefig(r"Python\src\heatmap.png")
-    plt.close("all")
-
-    return Sxx_stats
-
-
+# Compute the suggested playback rate based on the dataset and it's sampling rate.
 def compute_playback(samples, col_num, sample_duration):
     dataset_duration = samples * sample_duration
     sampling_rate = 1 / sample_duration
@@ -216,25 +182,65 @@ def compute_playback(samples, col_num, sample_duration):
     return playback
 
 
-# Fast Fourier Transforms (FFTs)
-def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
+# ---FAST FOURIER TRANSFORMS (FFT)---
+
+
+# FFT and return the data in a specified frequency range
+def specific_freq_band(
+    dataseries, nperseg_val, noverlap_val, sampling_freq, f_low, f_high
+):
     f_spec_original, t_spec_original, Sxx_original = spectrogram(
         dataseries, fs=sampling_freq, nperseg=nperseg_val, noverlap=noverlap_val
     )
 
-    # mean_vals = np.mean(Sxx_original, axis=0)
-    # skew_vals = skew(Sxx_original, axis=0)
-    # std_vals = np.std(Sxx_original, axis=0)
-    # kurt_vals = kurtosis(Sxx_original, axis=0)
+    # Slice the data to only include specified frequencies.
+    idx = np.where((f_spec_original >= f_low) & (f_spec_original <= f_high))[0]
 
-    # Sxx_stats = pd.DataFrame(
-    #     {
-    #         "mean": mean_vals,
-    #         "skew": skew_vals,
-    #         "std": std_vals,
-    #         "kurtosis": kurt_vals,
-    #     }
-    # )
+    f_focused = f_spec_original[idx]
+    band = Sxx_original[idx, :]
+
+    Sxx_stats = pd.DataFrame(
+        {
+            "mean": np.mean(band, axis=0),
+            "skew": skew(band, axis=0),
+            "std": np.std(band, axis=0),
+            "kurtosis": kurtosis(band, axis=0),
+        }
+    )
+
+    # Plot spectrogram
+    plt.figure(figsize=(12, 6))
+    plt.pcolormesh(
+        t_spec_original,
+        f_focused,
+        10 * np.log10(band),
+        shading="gouraud",
+    )
+    plt.ylabel("Frequency [Hz]")
+    plt.xlabel("Time [sec]")
+
+    plt.ylim(f_low, f_high)
+
+    plt.colorbar(label="Intensity [dB]")
+    plt.title(f"Spectrogram ({f_low}Hz - {f_high}Hz)")
+    plt.savefig(r"Python\src\Spectrogram.png")
+    plt.close("all")
+
+    # Plot heatmap
+    f_heat = plt.figure()
+    corr_mtx = Sxx_stats.corr(numeric_only=True)
+    sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
+    plt.title("Correlation heatmap")
+    plt.savefig(r"Python\src\heatmap.png")
+    plt.close(f_heat)
+
+    return Sxx_stats
+
+
+def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
+    f_spec_original, t_spec_original, Sxx_original = spectrogram(
+        dataseries, fs=sampling_freq, nperseg=nperseg_val, noverlap=noverlap_val
+    )
 
     Sxx_df = pd.DataFrame(Sxx_original)
     rows, cols = Sxx_original.shape
@@ -265,7 +271,7 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     plt.savefig(r"Python\src\heatmap.png")
     plt.close(f_heat)
 
-    # Plot the spectrogram
+    # Plot spectrogram
     f_spec = plt.figure()
     plt.pcolormesh(
         t_spec_original, f_spec_original, 10 * np.log10(Sxx_original), shading="gouraud"
@@ -273,9 +279,7 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     plt.ylabel("Frequency [Hz]")
     plt.xlabel("Time [sec]")
     plt.title(f"Spectrogram (nperseg={nperseg_val}, noverlap={noverlap_val})")
-    plt.ylim(
-        0, 5000
-    )  # Adjust y-axis limit based on expected frequency range of the signal
+    plt.ylim(0, 5000)
     plt.colorbar(label="Intensity [dB]")
     plt.savefig(r"Python\src\Spectrogram.png")
     plt.close(f_spec)
@@ -283,7 +287,9 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     return Sxx_stats
 
 
-# UDP Transfer
+# ---UDP TRANSFER---
+
+
 def send_over_UDP(
     dataframe,
     host="127.0.0.1",
@@ -302,6 +308,7 @@ def send_over_UDP(
             dataframe["magnitude"].to_numpy(),
         ):
 
+            # If the stop button has been clicked, data is no longer sent.
             if stop_event.is_set():
                 print("Sonification stopped")
                 break
@@ -309,10 +316,13 @@ def send_over_UDP(
             if np.isnan(mean):
                 continue
 
+            # Format data correctly for the Pure Data patch.
             msg = f"{mean} {skew} {std} {kurtosis} {magnitude};\n"
+
+            # Send the data via UDP to the port PD is listening on.
             s.sendto(msg.encode("utf-8"), (host, port))
 
-            # Emit to frontend
+            # Emit data to frontend for chartjs
             if socketio:
                 socketio.emit(
                     "rolling_stats",
@@ -324,6 +334,7 @@ def send_over_UDP(
                         "magnitude": round(magnitude, 2),
                     },
                 )
+
+            # Get current delay from flask_app and sleep for the specified number of seconds/milliseconds.
             delay = get_delay()
-            print(delay)
             time.sleep(delay)

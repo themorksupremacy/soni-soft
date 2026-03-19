@@ -8,11 +8,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
+
+
 <body>
     <div class="container">
 
         <!-- Title section -->
-        <div class="title">Sonification Configuration</div>
+        <div class="title">Configuration Panel</div>
 
         <div class="content">
             <!-- Configuration form -->
@@ -20,23 +22,19 @@
                 <div class="configuration-details">
 
                     <!-- Dataset file -->
-                    <div class="input-box">
+                    <div class="input-box full-width">
                         <span class="details">Select dataset</span>
-                        <input type="file" placeholder="filename.csv" name="dataset" required>
+                        <div class="drop-zone" id="drop-zone">
+                            <span class="drop-text">Drag & drop your CSV file here<br>or click to upload</span>
+                            <input type="file" name="dataset" id="file-input" accept=".csv" required hidden>
+                        </div>
                     </div>
 
                     <!-- Delay Controller -->
                     <div class="input-box">
-                        <span class="details">Delay controller</span>
+                        <span class="details">Delay: <output id="delayValue">0.014627922</output></span>
                         <input type="range" name="delay" class="form-range" min="0.00" max="1.0" step="0.005"
                             value="0.014627922" oninput="delayValue.value = this.value">
-                        <output id="delayValue">0.014627922</output>
-                    </div>
-
-                    <!-- Window size -->
-                    <div class="input-box">
-                        <span class="details">Preferred window size</span>
-                        <input type="number" placeholder="1500" name="window_size" required>
                     </div>
 
                     <!-- Pure Data port -->
@@ -65,6 +63,26 @@
                     </div>
                 </div>
 
+                <!-- Frequency Range  -->
+                <div class="configuration-details" id="frequency-range" style="display: none;">
+                    <div class="input-box">
+                        <span class="details">Min Frequency (Hz)</span>
+                        <input type="number" name="freq_min" placeholder="e.g. 100">
+                    </div>
+
+                    <div class="input-box">
+                        <span class="details">Max Frequency (Hz)</span>
+                        <input type="number" name="freq_max" placeholder="e.g. 1000">
+                    </div>
+                </div>
+
+                <div class="configuration-details" id="rolling-window" style="display:none">
+                    <div class="input-box">
+                        <span class="details">Preferred Window Size</span>
+                        <input type="number" placeholder="1500" name="window_size" required>
+                    </div>
+                </div>
+
 
                 <!-- Submit button -->
                 <div class="button">
@@ -73,6 +91,68 @@
             </form>
         </div>
     </div>
+
+    <script>
+        const timeRadio = document.getElementById("time-domain");
+        const freqRadio = document.getElementById("freq-domain");
+        const freqRange = document.getElementById("frequency-range");
+        const rollingWindow = document.getElementById("rolling-window");
+
+        function toggleFrequencyInputs() {
+            if (freqRadio.checked) {
+                freqRange.style.display = "flex";
+                rollingWindow.style.display = "none";
+            } else {
+                freqRange.style.display = "none";
+                rollingWindow.style.display = "flex";
+            }
+        }
+
+        toggleFrequencyInputs();
+
+        timeRadio.addEventListener("change", toggleFrequencyInputs);
+        freqRadio.addEventListener("change", toggleFrequencyInputs);
+
+        const dropZone = document.getElementById("drop-zone");
+        const fileInput = document.getElementById("file-input");
+
+
+        dropZone.addEventListener("click", () => fileInput.click());
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+
+                dropZone.querySelector(".drop-text").textContent = files[0].name;
+            }
+
+            const file = files[0];
+            if (!file.name.endsWith(".csv")) {
+                alert("Please upload a CSV file");
+                return;
+            }
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length > 0) {
+                dropZone.querySelector(".drop-text").textContent = fileInput.files[0].name;
+            }
+        });
+    </script>
+    </script>
 </body>
 
 </html>

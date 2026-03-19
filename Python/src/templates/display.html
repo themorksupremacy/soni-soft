@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Live Stats</title>
+    <title>Live Stats - Full Screen</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -12,26 +12,50 @@
             color: #00ff00;
             font-family: 'Courier New', monospace;
             margin: 0;
+            overflow: hidden;
+
         }
 
         .layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: repeat(3, 1fr);
             gap: 10px;
             height: 100vh;
             padding: 10px;
             box-sizing: border-box;
-            /* Circular CRT screen vignette */
             background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
         }
 
+        .left,
+        .right {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            min-height: 0;
+
+        }
+
         .control-panel {
-            padding: 15px;
+            flex: 0 0 auto;
+            padding: 10px;
             background: #0a0a0a;
             border: 2px solid #004400;
             box-shadow: inset 0 0 10px #002200;
             text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .control-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid #004400;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
         }
 
         button,
@@ -40,14 +64,26 @@
             background: #000;
             color: #00ff00;
             border: 1px solid #00ff00;
-            padding: 5px;
+            padding: 4px;
             cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #002200;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
         }
 
         canvas {
             background-color: #050505;
-            /* The Glow Effect */
-            filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.5));
+            filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.4));
             border: 1px solid #002200;
         }
     </style>
@@ -58,33 +94,29 @@
         <div class="left">
             <div class="control-panel">
                 <h2>Control Panel</h2>
-                <div>
-                    <label for="delaySlider">Playback Delay:</label>
+                <div style="margin-bottom: 10px;">
+                    <label for="delaySlider">Delay: <span id="delayValue">{{ delay }}</span></label>
                     <input type="range" id="delaySlider" min="0.01" max="1.0" step="0.01" value="{{ delay }}">
-                    <span id="delayValue">{{ delay }}</span>
                 </div>
-                <div>
-                    <button id="btnStop">Stop Sonification</button>
+                <div class="controls-grid">
+                    <button id="btnStart">START</button>
+                    <button id="btnStop">STOP</button>
+                    <button id="btnSpectrogram">DOWNLOAD</button>
+                    <button id="btnPlayAudification">PLAY AUDIFICATION</button>
                 </div>
-                <div>
-                    <button id="btnSpectrogram">Download Spectrogram</button>
-                </div>
-                <div>
-                    <button id="btnPlayAudification">Play Audification</button>
-                    <audio id="audioPlayer">
-                        <source id="audioSource" src="/get_audification" type="audio/wav">
-                    </audio>
-                </div>
+                <audio id="audioPlayer">
+                    <source id="audioSource" src="/get_audification" type="audio/wav">
+                </audio>
             </div>
-            <canvas id="kurtChart"></canvas>
 
-            <canvas id="magChart"></canvas>
+            <div class="chart-container"><canvas id="kurtChart"></canvas></div>
+            <div class="chart-container"><canvas id="magChart"></canvas></div>
         </div>
 
         <div class="right">
-            <canvas id="skewChart"></canvas>
-            <canvas id="stdChart"></canvas>
-            <canvas id="meanChart"></canvas>
+            <div class="chart-container"><canvas id="skewChart"></canvas></div>
+            <div class="chart-container"><canvas id="stdChart"></canvas></div>
+            <div class="chart-container"><canvas id="meanChart"></canvas></div>
         </div>
     </div>
 
@@ -106,14 +138,20 @@
                 options: {
                     animation: false,
                     responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
                     scales: {
                         x: {
                             display: xAxis,
-                            title: xAxis ? { display: true, text: "Time" } : undefined
+                            grid: { color: '#111' },
+                            title: xAxis ? { display: true, text: "Time", color: '#00ff00' } : undefined
                         },
                         y: {
-                            title: { display: true, text: label },
-                            min: yMin, // will be set dynamically
+                            grid: { color: '#111' },
+                            title: { display: true, text: label, color: color, font: { size: 10 } },
+                            min: yMin,
                             max: yMax
                         }
                     }
@@ -127,8 +165,6 @@
         const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, 50, 127);
         const magChart = createChart("magChart", "Magnitude", "lime", true, 0, 1);
 
-        const charts = [meanChart, skewChart, stdChart, kurtChart, magChart];
-
         const socket = io();
         let t = 0;
 
@@ -140,7 +176,6 @@
                 chart.data.labels.shift();
                 chart.data.datasets[0].data.shift();
             }
-
             chart.update();
         }
 
@@ -161,35 +196,25 @@
             socket.emit("update_delay", { delay: parseFloat(this.value) });
         });
 
-        const btnStop = document.getElementById("btnStop");
-        btnStop.addEventListener("click", function () {
-            socket.emit("stop_sonification");
-        });
-
-        const btnSpectrogram = document.getElementById("btnSpectrogram");
-        document.getElementById("btnSpectrogram").addEventListener("click", function () {
-            window.location.href = "/download_spectrogram";
-        });
+        document.getElementById("btnStop").addEventListener("click", () => socket.emit("stop_sonification"));
+        document.getElementById("btnStart").addEventListener("click", () => socket.emit("start_sonification"));
+        document.getElementById("btnSpectrogram").addEventListener("click", () => window.location.href = "/download_spectrogram");
 
         const btnPlayAudio = document.getElementById("btnPlayAudification");
         const audioPlayer = document.getElementById("audioPlayer");
 
         btnPlayAudio.addEventListener("click", function () {
-
             audioPlayer.load();
-
             if (audioPlayer.paused) {
                 audioPlayer.play();
-                btnPlayAudio.textContent = "Pause Audification";
+                btnPlayAudio.textContent = "PAUSE AUDIO";
             } else {
                 audioPlayer.pause();
-                btnPlayAudio.textContent = "Play Audification";
+                btnPlayAudio.textContent = "PLAY AUDIO";
             }
         });
 
-        audioPlayer.onended = function () {
-            btnPlayAudio.textContent = "Play Audification";
-        };
+        audioPlayer.onended = () => btnPlayAudio.textContent = "PLAY AUDIO";
     </script>
 </body>
 
