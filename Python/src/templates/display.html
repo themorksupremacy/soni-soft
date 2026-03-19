@@ -8,53 +8,47 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            background: black;
-            color: lime;
-            font-family: monospace;
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
             margin: 0;
-            padding: 0;
-            height: 100vh;
-            box-sizing: border-box;
         }
 
-        /* Grid layout: two columns */
         .layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
+            gap: 10px;
             height: 100vh;
-            box-sizing: border-box;
-        }
-
-        /* Left column: control panel + 2 charts stacked */
-        .left {
-            display: grid;
-            grid-template-rows: 1fr 1fr 1fr;
-            gap: 5px;
-        }
-
-        /* Control panel styling */
-        .control-panel {
             padding: 10px;
-            background: #111;
-            border: 1px solid #444;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
+            box-sizing: border-box;
+            /* Circular CRT screen vignette */
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
         }
 
-        /* Right column: 3 charts stacked */
-        .right {
-            display: grid;
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
+        .control-panel {
+            padding: 15px;
+            background: #0a0a0a;
+            border: 2px solid #004400;
+            box-shadow: inset 0 0 10px #002200;
+            text-transform: uppercase;
+        }
+
+        button,
+        input {
+            accent-color: #00ff00;
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px;
+            cursor: pointer;
         }
 
         canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
+            background-color: #050505;
+            /* The Glow Effect */
+            filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.5));
+            border: 1px solid #002200;
         }
     </style>
 </head>
@@ -74,6 +68,12 @@
                 </div>
                 <div>
                     <button id="btnSpectrogram">Download Spectrogram</button>
+                </div>
+                <div>
+                    <button id="btnPlayAudification">Play Audification</button>
+                    <audio id="audioPlayer">
+                        <source id="audioSource" src="/get_audification" type="audio/wav">
+                    </audio>
                 </div>
             </div>
             <canvas id="kurtChart"></canvas>
@@ -170,6 +170,26 @@
         document.getElementById("btnSpectrogram").addEventListener("click", function () {
             window.location.href = "/download_spectrogram";
         });
+
+        const btnPlayAudio = document.getElementById("btnPlayAudification");
+        const audioPlayer = document.getElementById("audioPlayer");
+
+        btnPlayAudio.addEventListener("click", function () {
+
+            audioPlayer.load();
+
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                btnPlayAudio.textContent = "Pause Audification";
+            } else {
+                audioPlayer.pause();
+                btnPlayAudio.textContent = "Play Audification";
+            }
+        });
+
+        audioPlayer.onended = function () {
+            btnPlayAudio.textContent = "Play Audification";
+        };
     </script>
 </body>
 

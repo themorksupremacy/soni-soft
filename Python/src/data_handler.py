@@ -7,6 +7,7 @@ from scipy.signal import spectrogram
 from scipy.stats import skew, kurtosis
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.io import wavfile
 
 # Code formatting rules:
 # All data structures containing the statistical momements should be written in the same order everytime.
@@ -133,15 +134,27 @@ def map_all_stats_fdom(data_frame):
     )
 
 
-# Diagram Generation
+def audification(data_series, sampling_rate=35087):
+    # Convert to numpy array immediately to use efficient memory handling
+    data = data_series.to_numpy()
 
+    x_min = data.min()
+    x_max = data.max()
 
-def gen_Spectogram():
-    return 0
+    range_val = x_max - x_min
+    if range_val == 0:
+        range_val = 1
 
+    audio_data = (((data - x_min) / range_val) * 2 - 1) * 32767
 
-def gen_freq_dom_comparison():
-    return 0
+    audio_data = audio_data.astype(np.int16)
+
+    file_path = r"Python\src\data_audio.wav"
+    wavfile.write(file_path, int(sampling_rate), audio_data)
+
+    del audio_data
+
+    return file_path
 
 
 def specific_freq_band(dataseries, nperseg_val, noverlap_val, sampling_freq):
@@ -179,6 +192,7 @@ def specific_freq_band(dataseries, nperseg_val, noverlap_val, sampling_freq):
     plt.ylim(0, 5000)
     plt.colorbar(label="Intensity [dB]")
     plt.savefig(r"Python\src\Spectrogram.png")
+    plt.close("all")
 
     # Correlation heatmap
     plt.figure()
@@ -186,12 +200,24 @@ def specific_freq_band(dataseries, nperseg_val, noverlap_val, sampling_freq):
     sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
     plt.title("Correlation heatmap")
     plt.savefig(r"Python\src\heatmap.png")
+    plt.close("all")
 
     return Sxx_stats
 
 
+def compute_playback(samples, col_num, sample_duration):
+    dataset_duration = samples * sample_duration
+    sampling_rate = 1 / sample_duration
+
+    # Number of samples per column
+    col_samples = samples / col_num
+    playback = col_samples * sample_duration
+
+    return playback
+
+
 # Fast Fourier Transforms (FFTs)
-def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq):
+def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     f_spec_original, t_spec_original, Sxx_original = spectrogram(
         dataseries, fs=sampling_freq, nperseg=nperseg_val, noverlap=noverlap_val
     )
@@ -211,6 +237,9 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq):
     # )
 
     Sxx_df = pd.DataFrame(Sxx_original)
+    rows, cols = Sxx_original.shape
+    print(rows)
+    print(cols)
 
     stats_list = []
 
@@ -229,26 +258,27 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq):
     Sxx_stats = pd.DataFrame(stats_list)
 
     # Plot correlation heatmap
+    f_heat = plt.figure()
     corr_mtx = Sxx_stats.corr(numeric_only=True)
     sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
-    plt.savefig(r"Python\src\heatmap.png")
     plt.title("Correlation heatmap")
+    plt.savefig(r"Python\src\heatmap.png")
+    plt.close(f_heat)
 
     # Plot the spectrogram
-    plt.figure(figsize=(12, 6))
+    f_spec = plt.figure()
     plt.pcolormesh(
         t_spec_original, f_spec_original, 10 * np.log10(Sxx_original), shading="gouraud"
     )
     plt.ylabel("Frequency [Hz]")
     plt.xlabel("Time [sec]")
-    plt.title(
-        f"Spectrogram of Original Signal (nperseg={nperseg_val}, noverlap={noverlap_val})"
-    )
+    plt.title(f"Spectrogram (nperseg={nperseg_val}, noverlap={noverlap_val})")
     plt.ylim(
         0, 5000
     )  # Adjust y-axis limit based on expected frequency range of the signal
     plt.colorbar(label="Intensity [dB]")
     plt.savefig(r"Python\src\Spectrogram.png")
+    plt.close(f_spec)
 
     return Sxx_stats
 

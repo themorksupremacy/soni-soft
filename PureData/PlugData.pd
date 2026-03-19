@@ -17,7 +17,7 @@
 #X obj 393 791 else/pan2~, f 11;
 #X floatatom 435 737 2 0 0 0 - - - 16;
 #X obj 535 760 else/f2s~ 10, f 11;
-#X obj 289 737 hsl 128 15 -1 1 0 0 empty empty empty -2 -8 0 10 #e4e4e4 #4d4d4d #373737 0 1;
+#X obj 275 736 hsl 128 15 -1 1 0 0 empty empty empty -2 -8 0 10 #e4e4e4 #4d4d4d #373737 0 1;
 #X obj 384 1003 +~;
 #X obj 500 1003 +~;
 #X obj 384 1041 *~ 0.2;
@@ -75,7 +75,7 @@
 #X connect 21 0 4 0;
 #X connect 22 0 4 1;
 #X connect 23 0 5 0;
-#X connect 23 1 18 0;
+#X connect 23 1 45 0;
 #X connect 23 2 14 0;
 #X connect 23 3 39 0;
 #X connect 23 4 24 0;
