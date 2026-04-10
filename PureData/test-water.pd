@@ -1,0 +1,10 @@
+#N canvas 827 239 734 565 12;
+#X obj 465 267 bp~ 800 20;
+#X obj 465 303 hip~ 7000;
+#X obj 465 329 *~ 0.1;
+#X obj 465 233 noise~ 400;
+#X obj 657 170 vsl 17 128 600 2000 0 0 empty empty empty 0 -9 0 10 #e4e4e4 #4d4d4d #373737 0 1;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 3 0 0 0;
+#X connect 4 0 0 1;

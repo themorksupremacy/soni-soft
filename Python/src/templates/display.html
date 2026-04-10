@@ -86,6 +86,21 @@
             filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.4));
             border: 1px solid #002200;
         }
+
+        .peak-list-container {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid #004400;
+            margin-top: 5px;
+            padding: 5px;
+            font-size: 0.8em;
+        }
+        .peak-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #111;
+            padding: 2px 0;
+        }
     </style>
 </head>
 
@@ -110,13 +125,40 @@
             </div>
 
             <div class="chart-container"><canvas id="kurtChart"></canvas></div>
-            <div class="chart-container"><canvas id="magChart"></canvas></div>
+            <div class="chart-container"><canvas id="skewChart"></canvas></div>
         </div>
 
         <div class="right">
-            <div class="chart-container"><canvas id="skewChart"></canvas></div>
-            <div class="chart-container"><canvas id="stdChart"></canvas></div>
+            <div class="control-panel">
+                <h2>Peak Analysis</h2>
+                <div>AVG DURATION: <span style="color: orange;">{{ avg_duration }} samples</span></div>
+        
+                <div class="peak-list-container">
+                    <div class="peak-item" style="border-bottom: 1px solid #00ff00; font-weight: bold; font-size: 0.75em;">
+                        <span>#</span>
+                        <span>Dur(smp)</span>
+                        <span>Dur(sec)</span>
+                        <span>Kurt</span>
+                        <span>Std</span>
+                    </div>
+
+                    {% if peak_details %}
+                        {% for peak in peak_details %}
+                        <div class="peak-item">
+                            <span>{{ peak.id }}</span>
+                            <span>{{ peak.duration }}</span>
+                            <span style="color: #00ffff;">{{ peak.duration_sec }}s</span>
+                            <span>{{ peak.kurtosis }}</span>
+                            <span>{{ peak.std_dev }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="peak-item">No peaks detected.</div>
+                    {% endif %}
+                </div>
+            </div>
             <div class="chart-container"><canvas id="meanChart"></canvas></div>
+            <div class="chart-container"><canvas id="stdChart"></canvas></div>
         </div>
     </div>
 
@@ -159,11 +201,13 @@
             });
         }
 
-        const meanChart = createChart("meanChart", "Mean", "lime", false, 50, 105);
-        const skewChart = createChart("skewChart", "Skew", "cyan", false, -1, 1);
-        const stdChart = createChart("stdChart", "Std", "orange", false, 50, 127);
-        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, 50, 127);
-        const magChart = createChart("magChart", "Magnitude", "lime", true, 0, 1);
+        // --- display.html script section ---
+
+// Update the initializations to use the 'limits' variable passed from Flask
+        const meanChart = createChart("meanChart", "Mean", "lime", false, {{ limits.mean.min }}, {{ limits.mean.max }});
+        const skewChart = createChart("skewChart", "Skew", "cyan", false, {{ limits.skew.min }}, {{ limits.skew.max }});
+        const stdChart = createChart("stdChart", "Std", "orange", false, {{ limits.std.min }}, {{ limits.std.max }});
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, {{ limits.kurtosis.min }}, {{ limits.kurtosis.max }});
 
         const socket = io();
         let t = 0;
@@ -184,7 +228,6 @@
             updateChart(skewChart, stats.skew);
             updateChart(stdChart, stats.std);
             updateChart(kurtChart, stats.kurtosis);
-            updateChart(magChart, stats.magnitude);
             t++;
         });
 
