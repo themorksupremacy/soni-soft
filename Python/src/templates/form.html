@@ -44,23 +44,33 @@
                     </div>
                 </div>
 
-                <div class="domain-selection">
-                    <span class="gender-title">Analysis Domain</span>
+                <div class="configuration-details">
+                        <div class="input-box">
+                            <span class="details">Analysis Domain</span>
+                            <select name="domain" id="domain-select" required>
+                                <option value="time" selected>Time Domain</option>
+                                <option value="frequency">Frequency Domain</option>
+                            </select>
+                        </div>
 
-                    <input type="radio" name="domain" id="time-domain" value="time" checked>
-                    <input type="radio" name="domain" id="freq-domain" value="frequency">
+                        <div class="input-box">
+                            <span class="details">Dataset Type</span>
+                            <select name="dataset_type" id="dataset-type" required>
+                                <option value="simulated">Simulated</option>
+                                <option value="satellite">Satellite</option>
+                                <option value="satellite_powerspectrum">Satellite Powerspectrum</option>
+                            </select>
+                        </div>
 
-                    <div class="category">
-                        <label for="time-domain">
-                            <span class="dot one"></span>
-                            <span class="selection">Time Domain</span>
-                        </label>
-
-                        <label for="freq-domain">
-                            <span class="dot two"></span>
-                            <span class="selection">Frequency Domain</span>
-                        </label>
-                    </div>
+                        <div class="input-box">
+                            <span class="details">Patch Number</span>
+                            <select name="patch_type" id="patch-type" required>
+                                <option value="patch1">Patch 1 - Normalised</option>
+                                <option value="patch2">Patch 2 - 1:1 Mapping</option>
+                                <option value="patch3">Patch 3 - 1:1 Mapping</option>
+                                <option value="patch3">Patch 4 - 1:1 Mapping</option>
+                            </select>
+                        </div>
                 </div>
 
                 <!-- Frequency Range  -->
@@ -79,7 +89,7 @@
                 <div class="configuration-details" id="rolling-window" style="display:none">
                     <div class="input-box">
                         <span class="details">Preferred Window Size</span>
-                        <input type="number" placeholder="1500" name="window_size" required>
+                        <input type="number" placeholder="1500" name="window_size">
                     </div>
                 </div>
 
@@ -93,13 +103,12 @@
     </div>
 
     <script>
-        const timeRadio = document.getElementById("time-domain");
-        const freqRadio = document.getElementById("freq-domain");
+        const domainSelect = document.getElementById("domain-select");
         const freqRange = document.getElementById("frequency-range");
         const rollingWindow = document.getElementById("rolling-window");
 
         function toggleFrequencyInputs() {
-            if (freqRadio.checked) {
+            if (domainSelect.value === "frequency") {
                 freqRange.style.display = "flex";
                 rollingWindow.style.display = "none";
             } else {
@@ -110,8 +119,7 @@
 
         toggleFrequencyInputs();
 
-        timeRadio.addEventListener("change", toggleFrequencyInputs);
-        freqRadio.addEventListener("change", toggleFrequencyInputs);
+        domainSelect.addEventListener("change", toggleFrequencyInputs);
 
         const dropZone = document.getElementById("drop-zone");
         const fileInput = document.getElementById("file-input");

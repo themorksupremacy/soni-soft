@@ -8,6 +8,7 @@ from scipy.stats import skew, kurtosis
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.io import wavfile
+from scipy.ndimage import gaussian_filter
 
 # Code formatting rules:
 # All data structures containing the statistical momements should be written in the same order everytime.
@@ -44,36 +45,54 @@ def file_loader(file_name):
     return df
 
 def power_spectrum_file(dff):
-    df = dff.copy()
-    df = df.apply(pd.to_numeric, errors="coerce")
-    df = df.dropna(axis=0, how="all")
-    df = df.dropna(axis=1, how="all")
+    # 1. Separate the time column so it doesn't mess up the statistics
+    time_col = dff['time']
+    # Select only the frequency columns (all columns except 'time')
+    spectral_data = dff.drop(columns=['time'])
+    
+    # 2. Compute moments across frequencies (axis=1) for every time point
+    # This gives you a time series for each statistic
+    stats_df = pd.DataFrame({
+        "time": time_col,
+        "mean": spectral_data.mean(axis=1),
+        "std": spectral_data.std(axis=1),
+        "skew": spectral_data.skew(axis=1),
+        "kurtosis": spectral_data.kurtosis(axis=1)
+    })
 
-    stats_list = []
+    # 3. Apply Rolling Statistics (as suggested by supervisor)
+    # If you want to smooth the evolution over time, apply a rolling window
+    # here. For example, a 10-step rolling mean:
+    stats_df['mean_smooth'] = stats_df['mean'].rolling(window=10).mean()
 
-    for _, row in df.iterrows():
-        row_series = row.dropna()
-        if row_series.empty:
-            continue
-        stats_list.append({
-            "mean": row_series.mean(),
-            "skew": row_series.skew(),
-            "std": row_series.std(),
-            "kurtosis": row_series.kurtosis(),
-        })
-
-    Sxx_stats = pd.DataFrame(stats_list)
-
-    Sxx_stats = Sxx_stats.fillna(0)
-
-    f_heat = plt.figure()
-    corr_mtx = Sxx_stats.corr(numeric_only=True)
+    # 4. Correlation Heatmap
+    plt.figure(figsize=(8, 6))
+    corr_mtx = stats_df[["mean", "std", "skew", "kurtosis"]].corr()
     sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
-    plt.title("Correlation heatmap")
-    plt.savefig(r"Python\src\heatmap.png")
-    plt.close(f_heat)
+    plt.title("Correlation of Spectral Moments Over Time")
+    plt.savefig("heatmap.png")
+    
+    return stats_df
 
-    return Sxx_stats
+def band_stats(dff, freq_cols, window_size=10):
+    time_col = dff['time']
+    
+    # Select band (multiple columns)
+    band_data = dff[freq_cols]
+    
+    # Collapse band → single time series
+    band_signal = band_data.mean(axis=1)
+    
+    # Rolling stats
+    stats_df = pd.DataFrame({
+        "time": time_col,
+        "mean": band_signal.rolling(window_size).mean(),
+        "std": band_signal.rolling(window_size).std(),
+        "skew": band_signal.rolling(window_size).skew(),
+        "kurtosis": band_signal.rolling(window_size).kurt()
+    })
+    
+    return stats_df.dropna()
     
 
 # Returns a dataseries of the 'b_wave' data retrieved from the csv dataset.
@@ -159,11 +178,117 @@ def map_all_stats_fdom(data_frame, smoothing=True):
             "skew": normalise_data(skew, range_min=0, range_max=1),
             "std": np.log1p(data_frame["std"]),
             "kurtosis": normalise_data(
-                kurtosis, range_min=30, range_max=calc_max(kurtosis, 30)
+                kurtosis, range_min=0, range_max=1
             ),
         }
     )
 
+# Mapping for frequency domain - patch 1
+def map_all_stats_fdom1(data_frame, smoothing=False):
+
+    window = int(data_frame["skew"].size * 0.15)
+
+    if smoothing:
+        skew = data_frame["skew"].rolling(window=window).mean()
+        kurtosis = data_frame["kurtosis"].rolling(window=window).mean()
+    else:
+        skew = data_frame["skew"]
+        kurtosis = data_frame["kurtosis"]
+
+    return pd.DataFrame(
+        {
+            "mean": normalise_data(data_frame["mean"], range_min=1000, range_max=calc_max(data_frame["mean"], 1000)),
+            "skew": map_skew_to_pan(data_frame["skew"]),
+            "std": np.log1p(data_frame["std"]),
+            "kurtosis": normalise_data(
+                kurtosis, range_min=5, range_max=calc_max(data_frame["kurtosis"], 5)),
+        }
+    )
+
+# Mapping for frequency domain - patch 2
+def map_all_stats_fdom2(data_frame, smoothing=True):
+
+    window = int(data_frame["skew"].size * 0.15)
+
+    if smoothing:
+        skew = data_frame["skew"].rolling(window=window).mean()
+        kurtosis = data_frame["kurtosis"].rolling(window=window).mean()
+    else:
+        skew = data_frame["skew"]
+        kurtosis = data_frame["kurtosis"]
+
+    return pd.DataFrame(
+        {
+            "mean": normalise_data(data_frame["mean"], range_min=1000, range_max=calc_max(data_frame["mean"], 1000)),
+            "skew": map_skew_to_pan(data_frame["skew"]),
+            "std": np.log1p(data_frame["std"]),
+            "kurtosis": normalise_data(
+                kurtosis, range_min=5, range_max=calc_max(data_frame["kurtosis"], 5)
+            ),
+        }
+    )
+
+# Mapping for frequency domain - patch 3
+def map_all_stats_fdom3(data_frame, smoothing=True):
+
+    window = int(data_frame["skew"].size * 0.25)
+
+    if smoothing:
+        skew = data_frame["skew"].rolling(window=window).mean()
+        kurtosis = data_frame["kurtosis"].rolling(window=window).mean()
+    else:
+        skew = data_frame["skew"]
+        kurtosis = data_frame["kurtosis"]
+
+    return pd.DataFrame(
+        {
+            "mean": normalise_data(data_frame["mean"], range_min=1000, range_max=calc_max(data_frame["mean"], 1000)),
+            "skew": map_skew_to_pan(data_frame["skew"]),
+            "std": np.log1p(data_frame["std"]),
+            "kurtosis": normalise_data(
+                kurtosis, range_min=20, range_max=calc_max(data_frame["kurtosis"], 20)
+            ),
+        }
+    )
+
+# Mapping for frequency domain - patch 4
+def map_all_stats_fdom4(data_frame, smoothing=True):
+
+    window = int(data_frame["skew"].size * 0.15)
+
+    if smoothing:
+        skew = data_frame["skew"].rolling(window=window).mean()
+        kurtosis = data_frame["kurtosis"].rolling(window=window).mean()
+    else:
+        skew = data_frame["skew"]
+        kurtosis = data_frame["kurtosis"]
+
+    return pd.DataFrame(
+        {
+            "mean": normalise_data(data_frame["mean"], range_min=20, range_max=100),
+            "skew": map_skew_to_pan(data_frame["skew"]),
+            "std": np.log1p(data_frame["std"]),
+            "kurtosis": normalise_data(
+                kurtosis, range_min=5, range_max=calc_max(data_frame["kurtosis"], 5)
+            ),
+        }
+    )
+
+def map_skew_to_pan(skew_values):
+    max_pos = max([x for x in skew_values if x > 0], default=0)
+    max_neg = abs(min([x for x in skew_values if x < 0], default=0))
+
+    pans = []
+    for x in skew_values:
+        if x > 0:
+            pan = x / max_pos if max_pos != 0 else 0
+        elif x < 0:
+            pan = x / max_neg if max_neg != 0 else 0
+        else:
+            pan = 0
+        pans.append(max(-1, min(1, pan)))  # clamp just in case
+
+    return pans
 
 # --- AUDIFICATION---
 
@@ -379,47 +504,124 @@ def save_live_stats_plots(stats_df):
             plt.savefig(rf"Python\src\{metric}_rolling_chart.png")
             plt.close()
 
+def plot_power_spectrum_spectrogram(df, output_path="Python/src/Spectrogram.png"):
+    df = df.copy()
+    time = df.iloc[:, 0].values
+    freqs = np.array([float(c) for c in df.columns[1:]])
+    power = df.iloc[:, 1:].values
+
+    power_db = 10 * np.log10(power + 1e-4)
+
+    power_db = gaussian_filter(power_db, sigma=[0.5, 0.8])
+
+    plt.figure(figsize=(12, 6))
+
+    im = plt.pcolormesh(
+        time,
+        freqs,
+        power_db.T,
+        shading="gouraud",
+        cmap="inferno" 
+    )
+
+    im.set_clim(vmin=np.percentile(power_db, 10), vmax=np.percentile(power_db, 99))
+
+    plt.xlabel("Time [s]")
+    plt.ylabel("Frequency [Hz]")
+    plt.title("Refined Power Spectrum")
+    plt.colorbar(im, label="Power (dB)")
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+
+    return power_db
+
+def plot_total_power(df, output_path="Python/src/TotalPower.png"):
+    time = df.iloc[:, 0].values
+    power = df.iloc[:, 1:].values
+
+    total_power = np.sum(power, axis=1)
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(time, total_power)
+
+    plt.xlabel("Time [s]")
+    plt.ylabel("Total Power")
+    plt.title("Total Wave Power vs Time")
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+
+    return total_power
+
 def plot_peak_corr(file):
     df = pd.read_csv(file)
+    
+    # If there is only 1 peak, correlation is mathematically impossible
+    if len(df) < 2:
+        print("Not enough peaks to calculate correlation.")
+        return
 
-    fig, axes = plt.subplots(1, 4, figsize=(18, 5)) # Widened slightly for 4 plots
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5))
+    
+    # Define the pairs to correlate
+    pairs = [
+        ('Std Dev (Peak)', 'Peak Std Dev'),
+        ('Kurtosis (Peak)', 'Peak Kurtosis'),
+        ('Avg Std Deviation (Dataset)', 'Dataset Avg Std Dev'),
+        ('Avg Kurtosis (Dataset)', 'Dataset Avg Kurtosis')
+    ]
 
-    sns.regplot(ax=axes[0], data=df, x='Std Dev (Peak)', y='Duration (Samples)', 
-                scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-    c_std = df['Duration (Samples)'].corr(df['Std Dev (Peak)'])
-    axes[0].set_title(f'Peak Std Dev\nCorr: {c_std:.2f}')
+    for i, (col, title) in enumerate(pairs):
+        # Check if the column has variation (std > 0)
+        if df[col].nunique() > 1:
+            sns.regplot(ax=axes[i], data=df, x=col, y='Duration (Samples)', 
+                        scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
+            corr_val = df['Duration (Samples)'].corr(df[col])
+            axes[i].set_title(f'{title}\nCorr: {corr_val:.2f}')
+        else:
+            # Handle the case where all values are identical
+            axes[i].scatter(df[col], df['Duration (Samples)'], alpha=0.5)
+            axes[i].set_title(f'{title}\nCorr: N/A (No Variance)')
+            axes[i].set_xlabel(col)
+            axes[i].set_ylabel('Duration (Samples)')
 
-    sns.regplot(ax=axes[1], data=df, x='Kurtosis (Peak)', y='Duration (Samples)', 
-                scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-    c_kurt = df['Duration (Samples)'].corr(df['Kurtosis (Peak)'])
-    axes[1].set_title(f'Peak Kurtosis\nCorr: {c_kurt:.2f}')
-
-    sns.regplot(ax=axes[2], data=df, x='Avg Std Deviation (Dataset)', y='Duration (Samples)', 
-                scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-    c_avg_std = df['Duration (Samples)'].corr(df['Avg Std Deviation (Dataset)'])
-    axes[2].set_title(f'Dataset Avg Std Dev\nCorr: {c_avg_std:.2f}')
-
-    sns.regplot(ax=axes[3], data=df, x='Avg Kurtosis (Dataset)', y='Duration (Samples)', 
-                scatter_kws={'alpha':0.5}, line_kws={'color':'red'})
-    c_avg_kurt = df['Duration (Samples)'].corr(df['Avg Kurtosis (Dataset)'])
-    axes[3].set_title(f'Dataset Avg Kurtosis\nCorr: {c_avg_kurt:.2f}')
-
+    plt.tight_layout()
     plt.savefig(r"Python\src\correlation.png")
     plt.close()
 
 
-#Currently not working
-def get_cumulative_peak_count(dataframe, peak_details, ceiling=100):
-    counts = np.zeros(len(dataframe))
+def get_ipi_heartbeat(dataframe, peak_details, base_delay_ms):
+    """
+    Calculates the Inter-Peak Interval.
+    Returns an array where each index contains the 'tempo' set by the 
+    most recent gap between two peaks.
+    """
+    ipi_values = np.zeros(len(dataframe))
     
-    for peak in peak_details:
-        counts[peak['start_index']] = 1
+    
+    if len(peak_details) < 2:
+        return ipi_values 
+
+    current_interval = 0
+    
+    for i in range(1, len(peak_details)):
+        prev_start = peak_details[i-1]['start_index']
+        curr_start = peak_details[i]['start_index']
         
-    cumulative = np.cumsum(counts)
-    
-    inverted_counts = ceiling - (cumulative * 10)
-    
-    return np.maximum(inverted_counts, 0)
+        
+        interval_frames = curr_start - prev_start
+        
+       
+        interval_ms = interval_frames * (base_delay_ms * 1000)
+        
+        
+        next_peak_start = peak_details[i+1]['start_index'] if i+1 < len(peak_details) else len(dataframe)
+        ipi_values[curr_start:next_peak_start] = interval_ms
+
+    return ipi_values
 
 # ---UDP TRANSFER---
 

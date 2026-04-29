@@ -55,6 +55,9 @@ def peaks_to_csv():
 @app.route("/download_spectrogram")
 def download():
 
+    plt.close('all')
+    plt.clf()
+
     peaks = peaks_to_csv()
 
     data_handler.plot_peak_corr(peaks)
@@ -62,9 +65,10 @@ def download():
     data_handler.save_live_stats_plots(raw_stats)
 
     with zipfile.ZipFile(r"Python\src\plots.zip", "w") as zipf:
-        #zipf.write(r"Python\src\Spectrogram.png")
+        zipf.write(r"Python\src\Spectrogram.png", "Spectrogram.png")
+        zipf.write(r"Python\src\TotalPower.png", "TotalPower.png")
         zipf.write(r"Python\src\heatmap.png", "heatmap.png")
-        #zipf.write(r"Python\src\data_audio.wav")
+        zipf.write(r"Python\src\data_audio.wav", "audification.wav")
         zipf.write(rf"{peaks}", "peaks.csv")
         zipf.write(r"Python\src\correlation.png", "peak_correlation.png")
         for metric in ['mean', 'skew', 'std', 'kurtosis']:
@@ -86,6 +90,7 @@ def start_sonification():
         data_handler.send_over_UDP,
         normalised_stats,
         raw_stats,
+        cumulative_peak_array,
         "127.0.0.1",
         port,
         get_current_delay,
@@ -124,9 +129,22 @@ def display():
 
     # Retrieve necessary values for sonification process
     file = request.files["dataset"]
-    window_size = int(request.form["window_size"])
     port = int(request.form["port"])
     domain = request.form["domain"]
+    patch_type = request.form.get("patch_type")
+    dataset_type = request.form.get("dataset_type")
+
+    freq_min = request.form.get("freq_min")
+    freq_max = request.form.get("freq_max")
+
+    if freq_min and freq_max:
+        freq_min = float(freq_min)
+        freq_max = float(freq_max)
+    else:
+        freq_min = None
+        freq_max = None
+
+    print(f"Processing {dataset_type} dataset in {domain} domain")
 
     global current_delay, b_wave, sampling_freq, base_name, normalised_stats, last_peaks, raw_stats, cumulative_peak_array
     current_delay = float(request.form["delay"])
@@ -135,38 +153,46 @@ def display():
     dataset = data_handler.file_loader(file)
     base_name = os.path.splitext(file.filename)[0]
 
-    #b_wave = data_handler.retr_b_wave(dataset)
-    #audification = data_handler.audification(b_wave, sampling_rate=sampling_freq)
-
-    #current_delay = data_handler.compute_playback(b_wave.size, 407, 0.0000285)
-
-    if domain == "frequency":
-        freq_min = request.form["freq_min"]
-        freq_max = request.form["freq_max"]
-
-        if freq_min and freq_max:
-            freq_min = float(freq_min)
-            freq_max = float(freq_max)
-        else:
-            freq_min = None
-            freq_max = None
-
-        if freq_min is None:
-            dff = data_handler.compute_stfft(b_wave, 1024, 512)
-        else:
-            dff = data_handler.specific_freq_band(
-                b_wave,
-                1024,
-                512,
-                35000,
-                freq_min,
-                freq_max,
-            )
-
-        normalised_stats = data_handler.map_all_stats_fdom(dff)
-    else:
+    if dataset_type == "satellite_powerspectrum":
+    # Already frequency-domain data
         raw_stats = data_handler.power_spectrum_file(dataset)
-        normalised_stats = data_handler.map_all_stats_fdom(raw_stats)
+        #raw_stats = data_handler.band_stats(dataset, dataset.columns[15:17])
+        data_handler.plot_power_spectrum_spectrogram(dataset)
+        data_handler.plot_total_power(dataset)
+        #audification = data_handler.audification(raw_stats, sampling_rate=sampling_freq)
+
+    else:
+        b_wave = data_handler.retr_b_wave(dataset)
+
+        #audification = data_handler.audification(b_wave, sampling_rate=sampling_freq)
+        current_delay = data_handler.compute_playback(b_wave.size, 407, 0.0000285)
+
+        if domain == "frequency":
+            if freq_min is not None:
+                raw_stats = data_handler.specific_freq_band(
+                    b_wave, 1024, 512, 35000, freq_min, freq_max
+                )
+            else:
+                raw_stats = data_handler.compute_stfft(b_wave, 1024, 512)
+
+        else:  
+            window_size = int(request.form["window_size"])
+            rolling = b_wave.rolling(window=window_size)
+            raw_stats = pd.DataFrame({
+                "mean": rolling.mean(),
+                "skew": rolling.skew(),
+                "std": rolling.std(),
+                "kurtosis": rolling.kurt(),
+            })
+
+    if patch_type == "patch1":
+        normalised_stats = data_handler.map_all_stats_fdom1(raw_stats)
+    elif patch_type == "patch2":
+        normalised_stats = data_handler.map_all_stats_fdom2(raw_stats)
+    elif patch_type == "patch3":
+        normalised_stats = data_handler.map_all_stats_fdom3(raw_stats)
+    elif patch_type == "patch4":
+        normalised_stats = data_handler.map_all_stats_fdom4(raw_stats)
 
     def calculate_limits(df):
         limits = {}
@@ -202,7 +228,7 @@ def display():
     print(f"Average Duration: {avg_duration}")
 
    
-    cumulative_peak_array = data_handler.get_cumulative_peak_count(raw_stats, peak_details)
+    cumulative_peak_array = data_handler.get_ipi_heartbeat(raw_stats, peak_details, current_delay)
 
     socketio.start_background_task(
         data_handler.send_over_UDP,

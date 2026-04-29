@@ -203,7 +203,7 @@
 
         // --- display.html script section ---
 
-// Update the initializations to use the 'limits' variable passed from Flask
+        // Update the initializations to use the 'limits' variable passed from Flask
         const meanChart = createChart("meanChart", "Mean", "lime", false, {{ limits.mean.min }}, {{ limits.mean.max }});
         const skewChart = createChart("skewChart", "Skew", "cyan", false, {{ limits.skew.min }}, {{ limits.skew.max }});
         const stdChart = createChart("stdChart", "Std", "orange", false, {{ limits.std.min }}, {{ limits.std.max }});
