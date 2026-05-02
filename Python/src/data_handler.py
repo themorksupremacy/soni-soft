@@ -44,14 +44,64 @@ def file_loader(file_name):
 
     return df
 
+#Attempt at computing spectral parameters shown in initial documents given by Dan Ratliff.
+def compute_spectral_parameters(df):
+    time = df["time"].values
+    freqs = df.columns[1:].astype(float).values
+    F_matrix = df.iloc[:, 1:].values
+
+    omega = 2 * np.pi * freqs
+    domega = omega[1] - omega[0]
+
+    omega_m_list = []
+    sigma_list = []
+    kappa_list = []
+
+    for F in F_matrix:
+        denom = np.sum(F) * domega
+
+        
+        if denom == 0:
+            omega_m_list.append(np.nan)
+            sigma_list.append(np.nan)
+            kappa_list.append(np.nan)
+            continue
+
+        
+        omega_m = np.sum(omega * F) * domega / denom
+
+        
+        sigma2 = np.sum((omega - omega_m)**2 * F) * domega / denom
+        sigma = np.sqrt(sigma2)
+
+        
+        kappa = (
+            np.sum((omega - omega_m)**4 * F) * domega
+            / (sigma**4 * denom)
+        ) - 3
+
+        omega_m_list.append(omega_m)
+        sigma_list.append(sigma)
+        kappa_list.append(kappa)
+
+    results = pd.DataFrame({
+        "time": time,
+        "omega_m": omega_m_list,
+        "sigma": sigma_list,
+        "kurtosis": kappa_list
+    })
+
+    print(results)
+    return results
+
+#Function to read the power spectrum file
 def power_spectrum_file(dff):
-    # 1. Separate the time column so it doesn't mess up the statistics
+    
     time_col = dff['time']
-    # Select only the frequency columns (all columns except 'time')
+    
     spectral_data = dff.drop(columns=['time'])
     
-    # 2. Compute moments across frequencies (axis=1) for every time point
-    # This gives you a time series for each statistic
+    
     stats_df = pd.DataFrame({
         "time": time_col,
         "mean": spectral_data.mean(axis=1),
@@ -60,12 +110,10 @@ def power_spectrum_file(dff):
         "kurtosis": spectral_data.kurtosis(axis=1)
     })
 
-    # 3. Apply Rolling Statistics (as suggested by supervisor)
-    # If you want to smooth the evolution over time, apply a rolling window
-    # here. For example, a 10-step rolling mean:
+    
     stats_df['mean_smooth'] = stats_df['mean'].rolling(window=10).mean()
 
-    # 4. Correlation Heatmap
+    #Plotting the correlation heatmap 
     plt.figure(figsize=(8, 6))
     corr_mtx = stats_df[["mean", "std", "skew", "kurtosis"]].corr()
     sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
@@ -77,10 +125,10 @@ def power_spectrum_file(dff):
 def band_stats(dff, freq_cols, window_size=10):
     time_col = dff['time']
     
-    # Select band (multiple columns)
+    
     band_data = dff[freq_cols]
     
-    # Collapse band → single time series
+    
     band_signal = band_data.mean(axis=1)
     
     # Rolling stats
@@ -338,43 +386,51 @@ def specific_freq_band(
     dataseries, nperseg_val, noverlap_val, sampling_freq, f_low, f_high
 ):
     f_spec_original, t_spec_original, Sxx_original = spectrogram(
-        dataseries, fs=sampling_freq, nperseg=nperseg_val, noverlap=noverlap_val
+        dataseries,
+        fs=sampling_freq,
+        nperseg=nperseg_val,
+        noverlap=noverlap_val
     )
 
-    # Slice the data to only include specified frequencies.
     idx = np.where((f_spec_original >= f_low) & (f_spec_original <= f_high))[0]
 
     f_focused = f_spec_original[idx]
-    band = np.log10(Sxx_original[idx, :] + 1e-10)
+    band = Sxx_original[idx, :]
+
+    
+    band_db = 10 * np.log10(band + 1e-12)
+
+    
+    band_db = np.clip(band_db, -120, None)
 
     Sxx_stats = pd.DataFrame(
         {
-            "mean": np.mean(band, axis=0),
-            "skew": skew(band, axis=0, bias=False),
-            "std": np.std(band, axis=0),
-            "kurtosis": kurtosis(band, axis=0, bias=False),
+            "mean": np.mean(band_db, axis=0),
+            "skew": skew(band_db, axis=0, bias=False),
+            "std": np.std(band_db, axis=0),
+            "kurtosis": kurtosis(band_db, axis=0, bias=False),
         }
     )
 
-    # Plot spectrogram
     plt.figure(figsize=(12, 6))
     plt.pcolormesh(
         t_spec_original,
         f_focused,
-        10 * np.log10(band),
-        shading="gouraud",
+        band_db,
+        shading="auto"
     )
+
     plt.ylabel("Frequency [Hz]")
     plt.xlabel("Time [sec]")
-
     plt.ylim(f_low, f_high)
 
     plt.colorbar(label="Intensity [dB]")
     plt.title(f"Spectrogram ({f_low}Hz - {f_high}Hz)")
+
     plt.savefig(r"Python\src\Spectrogram.png")
     plt.close("all")
 
-    # Plot heatmap
+    # Heatmap
     f_heat = plt.figure()
     corr_mtx = Sxx_stats.corr(numeric_only=True)
     sns.heatmap(corr_mtx, cmap="YlGnBu", annot=True)
@@ -384,6 +440,54 @@ def specific_freq_band(
 
     return Sxx_stats
 
+def compute_and_plot_stft_comparison(dataseries, sampling_freq=35087.7):
+    configs = [
+        (256, 126),
+        (1024, 512),
+        (8192, 4096),
+    ]
+
+    results = []
+    fig, axes = plt.subplots(1, 3, figsize=(18, 7), sharey=True, constrained_layout=True)
+
+    
+    v_min, v_max = -115, -35 
+
+    for i, (nperseg_val, noverlap_val) in enumerate(configs):
+        f, t, Sxx = spectrogram(
+            dataseries,
+            fs=sampling_freq,
+            nperseg=nperseg_val,
+            noverlap=noverlap_val
+        )
+
+        Sxx_db = 10 * np.log10(Sxx + 1e-12)
+        ax = axes[i]
+        
+        
+        im = ax.pcolormesh(t, f, Sxx_db, shading="gouraud", vmin=v_min, vmax=v_max)
+
+        ax.set_title(f"window_size={nperseg_val}, overlap_size={noverlap_val}", fontsize=14)
+        
+        
+        if i == 0:
+            ax.set_ylabel("Frequency [Hz]", fontsize=12)
+
+        if i == 1:
+            ax.set_xlabel("Time [sec]", fontsize=12)
+        
+        ax.set_ylim(0, 2100) 
+        results.append((f, t, Sxx))
+
+    cbar = fig.colorbar(im, ax=axes, location='right', shrink=0.6)
+    cbar.set_label("Intensity [dB]", fontsize=12)
+
+    
+    plt.savefig(r"Python\src\spectrogram_comparison.png", dpi=300, bbox_inches='tight')
+    plt.show()
+    plt.close(fig)
+
+    return results
 
 def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     f_spec_original, t_spec_original, Sxx_original = spectrogram(
@@ -435,7 +539,7 @@ def compute_stfft(dataseries, nperseg_val, noverlap_val, sampling_freq=35087.7):
     return Sxx_stats
 
 # Calculates a threshold based on the mean of the Std Dev column
-# Adjust 'sensitivity' to be higher if it's still picking up too much noise
+# Adjust sensitivity to be higher if it's still picking up too much noise
 
 def get_peak_list(dataframe, sensitivity=1):
     std_values = dataframe['std'].values
@@ -477,18 +581,18 @@ def save_live_stats_plots(stats_df):
     window_size = max(int(len(stats_df["skew"]) * 0.15), 1)
 
     for metric in metrics:
-        # --- 1. Standard Plot (Always generated) ---
+        
         plt.figure(figsize=(10, 4))
         plt.plot(stats_df[metric].values, color='royalblue', linewidth=2)
         plt.title(f"Recorded {metric.capitalize()} over Time")
         plt.grid(True, color='#ddd', linestyle='--')
         plt.tight_layout()
         
-        # Saves as mean_chart.png, skew_chart.png, etc.
+        
         plt.savefig(rf"Python\src\{metric}_chart.png")
         plt.close()
 
-        # --- 2. Rolling Plot (Only for std and kurtosis) ---
+        
         if metric in ['skew', 'kurtosis']:
             plt.figure(figsize=(10, 4))
             
@@ -500,7 +604,7 @@ def save_live_stats_plots(stats_df):
             plt.grid(True, color='#ddd', linestyle='--')
             plt.tight_layout()
             
-            # Saves as std_rolling_chart.png and kurtosis_rolling_chart.png
+            
             plt.savefig(rf"Python\src\{metric}_rolling_chart.png")
             plt.close()
 
@@ -559,7 +663,7 @@ def plot_total_power(df, output_path="Python/src/TotalPower.png"):
 def plot_peak_corr(file):
     df = pd.read_csv(file)
     
-    # If there is only 1 peak, correlation is mathematically impossible
+    
     if len(df) < 2:
         print("Not enough peaks to calculate correlation.")
         return
@@ -594,11 +698,7 @@ def plot_peak_corr(file):
 
 
 def get_ipi_heartbeat(dataframe, peak_details, base_delay_ms):
-    """
-    Calculates the Inter-Peak Interval.
-    Returns an array where each index contains the 'tempo' set by the 
-    most recent gap between two peaks.
-    """
+    
     ipi_values = np.zeros(len(dataframe))
     
     

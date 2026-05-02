@@ -156,6 +156,7 @@ def display():
     if dataset_type == "satellite_powerspectrum":
     # Already frequency-domain data
         raw_stats = data_handler.power_spectrum_file(dataset)
+        data_handler.compute_spectral_parameters(dataset)
         #raw_stats = data_handler.band_stats(dataset, dataset.columns[15:17])
         data_handler.plot_power_spectrum_spectrogram(dataset)
         data_handler.plot_total_power(dataset)
@@ -173,7 +174,7 @@ def display():
                     b_wave, 1024, 512, 35000, freq_min, freq_max
                 )
             else:
-                raw_stats = data_handler.compute_stfft(b_wave, 1024, 512)
+                raw_stats = data_handler.compute_and_plot_stft_comparison(b_wave)
 
         else:  
             window_size = int(request.form["window_size"])
