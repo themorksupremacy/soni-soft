@@ -1,6 +1,6 @@
 #N canvas 610 367 274 198 10;
 #X obj 161 46 phasor~;
-#X obj 164 5 hsl 64 12 0 1 0 1 empty empty engine-speed -2 6 1 8 #fcfcfc #000000 #000000 4450 1;
+#X obj 164 5 hsl 64 12 0 1 0 1 empty empty engine-speed -2 6 1 8 #fcfcfc #000000 #000000 3100 1;
 #X obj 83 113 *~ 0.25;
 #X obj 83 139 *~ 0.25;
 #X obj 161 23 * 12;
@@ -136,8 +136,8 @@
 #X connect 60 0 5 0;
 #X connect 61 0 60 0;
 #X restore 26 69 pd fourstroke engine;
-#X obj 253 -25 inlet;
-#X obj 214 193 outlet~;
+#X obj 387 97 inlet;
+#X obj 387 139 outlet~;
 #X connect 0 0 5 1;
 #X connect 1 0 4 0;
 #X connect 1 0 5 0;
