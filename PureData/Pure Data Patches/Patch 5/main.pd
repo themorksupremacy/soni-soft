@@ -39,7 +39,7 @@
 #X obj 1138 801 else/f2s~ 10, f 11;
 #X text 1216 659 Panning, f 8;
 #X obj 1141 693 hsl 128 17 -1 1 0 0 empty empty empty -2 -8 0 10 #e4e4e4 #4d4d4d #373737 0 1;
-#X obj 1128 582 r amp;
+#X obj 1075 598 r amp;
 #X obj 414 766 *~ 0;
 #X obj 278 645 r width;
 #X obj 738 963 +~;
@@ -55,11 +55,13 @@
 #X obj 838 689 >~ 0.99;
 #X obj 1078 654 vsl 17 128 0 1 0 0 empty empty empty 0 -9 0 10 #e4e4e4 #4d4d4d #373737 0 1;
 #X obj 838 717 hip~ 3000;
-#X obj 974 552 r var;
+#X obj 940 598 r var;
 #X obj 940 631 makenote 100 250;
 #X obj 977 731 cello;
 #X obj 970 694 pack f f;
+#X obj 639 317 print;
 #X connect 0 0 20 0;
+#X connect 0 0 60 0;
 #X connect 0 1 21 0;
 #X connect 0 2 22 0;
 #X connect 1 0 2 0;
