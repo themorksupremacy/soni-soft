@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soni Soft</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+
+
+<body>
+    <div class="container">
+
+        <!-- Title section -->
+        <div class="title">Configuration Panel</div>
+
+        <div class="content">
+            <!-- Configuration form -->
+            <form action="/display" method="POST" enctype="multipart/form-data">
+                <div class="configuration-details">
+
+                    <!-- Dataset file -->
+                    <div class="input-box full-width">
+                        <span class="details">Select dataset</span>
+                        <div class="drop-zone" id="drop-zone">
+                            <span class="drop-text">Drag & drop your CSV file here<br>or click to upload</span>
+                            <input type="file" name="dataset" id="file-input" accept=".csv" required hidden>
+                        </div>
+                    </div>
+
+                    <!-- Delay Controller -->
+                    <div class="input-box">
+                        <span class="details">Delay: <output id="delayValue">0.014627922</output></span>
+                        <input type="range" name="delay" class="form-range" min="0.00" max="1.0" step="0.005"
+                            value="0.014627922" oninput="delayValue.value = this.value">
+                    </div>
+
+                    <!-- Pure Data port -->
+                    <div class="input-box">
+                        <span class="details">Pure Data port</span>
+                        <input type="number" placeholder="8888" name="port" required>
+                    </div>
+                </div>
+
+                <div class="configuration-details">
+                        <div class="input-box">
+                            <span class="details">Analysis Domain</span>
+                            <select name="domain" id="domain-select" required>
+                                <option value="time" selected>Time Domain</option>
+                                <option value="frequency">Frequency Domain</option>
+                            </select>
+                        </div>
+
+                        <div class="input-box">
+                            <span class="details">Dataset Type</span>
+                            <select name="dataset_type" id="dataset-type" required>
+                                <option value="satellite_powerspectrum">Satellite Powerspectrum</option>
+                            </select>
+                        </div>
+
+                        <div class="input-box">
+                            <span class="details">Patch Number</span>
+                            <select name="patch_type" id="patch-type" required>
+                                <option value="patch1">Patch 1 - Normalised</option>
+                            </select>
+                        </div>
+                </div>
+
+                <!-- Frequency Range  -->
+                <div class="configuration-details" id="frequency-range" style="display: none;">
+                    <div class="input-box">
+                        <span class="details">Min Frequency (Hz)</span>
+                        <input type="number" name="freq_min" placeholder="e.g. 100">
+                    </div>
+
+                    <div class="input-box">
+                        <span class="details">Max Frequency (Hz)</span>
+                        <input type="number" name="freq_max" placeholder="e.g. 1000">
+                    </div>
+                </div>
+
+                <div class="configuration-details" id="rolling-window" style="display:none">
+                    <div class="input-box">
+                        <span class="details">Preferred Window Size</span>
+                        <input type="number" placeholder="1500" name="window_size">
+                    </div>
+                </div>
+
+
+                <!-- Submit button -->
+                <div class="button">
+                    <input type="submit" value="Initialise sonification">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const domainSelect = document.getElementById("domain-select");
+        const freqRange = document.getElementById("frequency-range");
+        const rollingWindow = document.getElementById("rolling-window");
+
+        function toggleFrequencyInputs() {
+            if (domainSelect.value === "frequency") {
+                freqRange.style.display = "flex";
+                rollingWindow.style.display = "none";
+            } else {
+                freqRange.style.display = "none";
+                rollingWindow.style.display = "flex";
+            }
+        }
+
+        toggleFrequencyInputs();
+
+        domainSelect.addEventListener("change", toggleFrequencyInputs);
+
+        const dropZone = document.getElementById("drop-zone");
+        const fileInput = document.getElementById("file-input");
+
+
+        dropZone.addEventListener("click", () => fileInput.click());
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+
+                dropZone.querySelector(".drop-text").textContent = files[0].name;
+            }
+
+            const file = files[0];
+            if (!file.name.endsWith(".csv")) {
+                alert("Please upload a CSV file");
+                return;
+            }
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files.length > 0) {
+                dropZone.querySelector(".drop-text").textContent = fileInput.files[0].name;
+            }
+        });
+    </script>
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Live Stats - Full Screen</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            overflow: hidden;
+
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            height: 100vh;
+            padding: 10px;
+            box-sizing: border-box;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+        }
+
+        .left,
+        .right {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            min-height: 0;
+
+        }
+
+        .control-panel {
+                flex: 1; 
+                height: 25%; 
+                padding: 10px;
+                background: #0a0a0a;
+                border: 2px solid #004400;
+                box-shadow: inset 0 0 10px #002200;
+                text-transform: uppercase;
+                font-size: 0.85em;
+                display: flex;        
+                flex-direction: column; 
+                min-height: 0;         
+            }
+
+        .control-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid #004400;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        button,
+        input {
+            accent-color: #00ff00;
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #002200;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        canvas {
+            background-color: #050505;
+            filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.4));
+            border: 1px solid #002200;
+        }
+
+        .peak-list-container {
+            flex: 1; /* Make the list take up the rest of the panel height */
+            overflow-y: auto;
+            border: 1px solid #004400;
+            margin-top: 5px;
+            padding: 5px;
+            font-size: 0.8em;
+        }
+        .peak-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #111;
+            padding: 2px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <div class="left">
+            <div class="control-panel">
+                <h2>Control Panel</h2>
+
+                <div style="margin-bottom: 15px; padding: 5px; border: 1px solid #002200; background: #050505;">
+                    <div style="font-size: 0.7em; color: #888;">FILE: {{ filename }}</div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span>DATE: <span style="color: #fff;">{{ file_info.date }}</span></span>
+                        <span>HOUR: <span style="color: #fff;">{{ file_info.hour }}:00</span></span>
+                        <span>BFI: <span style="color: #fff;">{{ file_info.bfi }}</span></span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <label for="delaySlider">Delay: <span id="delayValue">{{ delay }}</span></label>
+                    <input type="range" id="delaySlider" min="0.01" max="1.0" step="0.01" value="{{ delay }}">
+                </div>
+                <div class="controls-grid">
+                    <button id="btnStart">START</button>
+                    <button id="btnStop">STOP</button>
+                    <button id="btnSpectrogram">DOWNLOAD</button>
+                    <button id="btnPlayAudification">PLAY AUDIFICATION</button>
+                </div>
+                <audio id="audioPlayer">
+                    <source id="audioSource" src="/get_audification" type="audio/wav">
+                </audio>
+            </div>
+
+            <div class="control-panel">
+                <h2>Peak Analysis</h2>
+                <div>AVG DURATION: <span style="color: orange;">{{ avg_duration }} samples</span></div>
+        
+                <div class="peak-list-container">
+                    <div class="peak-item" style="border-bottom: 1px solid #00ff00; font-weight: bold; font-size: 0.75em;">
+                        <span>#</span>
+                        <span>Dur(smp)</span>
+                        <span>Dur(sec)</span>
+                        <span>Kurt</span>
+                        <span>Std</span>
+                    </div>
+
+                    {% if peak_details %}
+                        {% for peak in peak_details %}
+                        <div class="peak-item">
+                            <span>{{ peak.id }}</span>
+                            <span>{{ peak.duration }}</span>
+                            <span style="color: #00ffff;">{{ peak.duration_sec }}s</span>
+                            <span>{{ peak.kurtosis }}</span>
+                            <span>{{ peak.std_dev }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="peak-item">No peaks detected.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="right">
+            
+            <div class="chart-container"><canvas id="kurtChart"></canvas></div>
+            <div class="chart-container"><canvas id="meanChart"></canvas></div>
+            <div class="chart-container"><canvas id="stdChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        function createChart(canvasId, label, color, xAxis, yMin, yMax) {
+            return new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        borderWidth: 2,
+                        tension: 0.2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            display: xAxis,
+                            grid: { color: '#111' },
+                            title: xAxis ? { display: true, text: "Time", color: '#00ff00' } : undefined
+                        },
+                        y: {
+                            grid: { color: '#111' },
+                            title: { display: true, text: label, color: color, font: { size: 10 } },
+                            min: yMin,
+                            max: yMax
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- display.html script section ---
+
+        // Update the initializations to use the 'limits' variable passed from Flask
+        const meanChart = createChart("meanChart", "Mean", "lime", false, {{ limits.mean.min }}, {{ limits.mean.max }});
+        //const skewChart = createChart("skewChart", "Skew", "cyan", false, {{ limits.skew.min }}, {{ limits.skew.max }});
+        const stdChart = createChart("stdChart", "Std", "orange", false, {{ limits.std.min }}, {{ limits.std.max }});
+        const kurtChart = createChart("kurtChart", "Kurtosis", "magenta", false, {{ limits.kurtosis.min }}, {{ limits.kurtosis.max }});
+
+        const socket = io();
+        let t = 0;
+
+        function updateChart(chart, value) {
+            chart.data.labels.push(t);
+            chart.data.datasets[0].data.push(value);
+
+            if (chart.data.labels.length > 100) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update();
+        }
+
+        socket.on('rolling_stats', function (stats) {
+            updateChart(meanChart, stats.mean);
+            //updateChart(skewChart, stats.skew);
+            updateChart(stdChart, stats.std);
+            updateChart(kurtChart, stats.kurtosis);
+            t++;
+        });
+
+        const delaySlider = document.getElementById("delaySlider");
+        const delayValue = document.getElementById("delayValue");
+
+        delaySlider.addEventListener("input", function () {
+            delayValue.textContent = this.value;
+            socket.emit("update_delay", { delay: parseFloat(this.value) });
+        });
+
+        document.getElementById("btnStop").addEventListener("click", () => socket.emit("stop_sonification"));
+        document.getElementById("btnStart").addEventListener("click", () => socket.emit("start_sonification"));
+        document.getElementById("btnSpectrogram").addEventListener("click", () => window.location.href = "/download_spectrogram");
+
+        const btnPlayAudio = document.getElementById("btnPlayAudification");
+        const audioPlayer = document.getElementById("audioPlayer");
+
+        btnPlayAudio.addEventListener("click", function () {
+            audioPlayer.load();
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                btnPlayAudio.textContent = "PAUSE AUDIO";
+            } else {
+                audioPlayer.pause();
+                btnPlayAudio.textContent = "PLAY AUDIO";
+            }
+        });
+
+        audioPlayer.onended = () => btnPlayAudio.textContent = "PLAY AUDIO";
+    </script>
+</body>
+
+</html>
